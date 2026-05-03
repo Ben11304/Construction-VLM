@@ -55,6 +55,7 @@ function RunsScreen({ datasetId }) {
                 <th>Prompt</th>
                 <th>Status</th>
                 <th className="num">N</th>
+                <th className="num">Metric</th>
                 <th>Started</th>
               </tr>
             </thead>
@@ -68,6 +69,12 @@ function RunsScreen({ datasetId }) {
                   <td className="mono t-mute">{r.prompt}</td>
                   <td><Urn.StatusChip status={r.status} /></td>
                   <td className="num mono">{r.n.toLocaleString()}</td>
+                  <td className="num mono" title={r.aggregate_label ? `${r.aggregate_label} from ${r.aggregate_source}` : "no metrics.json"}>
+                    {r.aggregate_metric != null
+                      ? <><span className="mono">{r.aggregate_metric.toFixed(3)}</span> <span className="t-mute" style={{fontSize:"var(--fs-xs)"}}>{r.aggregate_label}</span></>
+                      : <span className="t-mute" style={{fontSize:"var(--fs-xs)"}}>no metrics.json</span>
+                    }
+                  </td>
                   <td className="mono t-text2">{r.started}</td>
                 </tr>
               ))}

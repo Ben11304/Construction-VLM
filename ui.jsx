@@ -57,32 +57,57 @@ function modelsInDataset(datasetId, taskId) {
   return D.models.filter(m => ids.has(m.id));
 }
 function summaryFor(datasetId, taskId) {
-  const conds = conditionsOf(datasetId);
   const rows = matrixFor(datasetId, taskId);
   const byModel = {};
   for (const r of rows) {
     if (!byModel[r.model]) byModel[r.model] = [];
     byModel[r.model].push(r);
   }
+  // Run-level aggregates by (model, dataset, task) — corpus-level when present
+  // (BLEU/mIoU are NOT row-averages and must come from metrics.json).
+  const runsByMT = {};
+  for (const r of D.runs) {
+    if (r.dataset !== datasetId) continue;
+    if (taskId != null && taskId !== "all" && r.task !== taskId) continue;
+    if (!runsByMT[r.model]) runsByMT[r.model] = [];
+    runsByMT[r.model].push(r);
+  }
+
   return Object.entries(byModel).map(([modelId, mrows]) => {
     const m = D.models.find(x => x.id === modelId) || {
       id: modelId, family: "—", params: "—", backend: "—", type: "open"
     };
+    const rowAccs = mrows.map(r => r.acc).filter(v => v != null);
+    const rowMacro = rowAccs.length ? rowAccs.reduce((s,v)=>s+v,0)/rowAccs.length : null;
+
+    // Prefer the latest run's aggregate_metric (corpus-level, methodology-correct).
+    const myRuns = runsByMT[modelId] || [];
+    const aggRuns = myRuns.filter(r => r.aggregate_metric != null);
+    const aggAvg = aggRuns.length
+      ? aggRuns.reduce((s,r) => s + r.aggregate_metric, 0) / aggRuns.length
+      : null;
+    const aggLabels = [...new Set(aggRuns.map(r => r.aggregate_label).filter(Boolean))];
+
+    const macroAcc = aggAvg != null ? aggAvg : rowMacro;
+    const macroSource = aggAvg != null ? "run-level" : "row-mean";
+
     const clean = mrows.find(r => r.condition === "clean");
     const aug   = mrows.filter(r => r.condition !== "clean");
-    const macroAcc = mrows.reduce((s,r) => s+r.acc, 0) / Math.max(1, mrows.length);
-    const macroF1  = mrows.reduce((s,r) => s+(r.f1 ?? r.acc), 0) / Math.max(1, mrows.length);
     const cleanAcc = clean ? clean.acc : null;
-    const augAcc   = aug.length ? aug.reduce((s,r) => s+r.acc, 0)/aug.length : null;
+    const augAccs  = aug.map(r => r.acc).filter(v => v != null);
+    const augAcc   = augAccs.length ? augAccs.reduce((s,v)=>s+v,0)/augAccs.length : null;
     const robustness = (cleanAcc && augAcc) ? augAcc/cleanAcc : null;
     const deltaClean = (cleanAcc != null && augAcc != null) ? augAcc - cleanAcc : null;
+
     const lats = mrows.map(r => r.latency_ms).filter(v => v != null);
     const avgLat = lats.length ? Math.round(lats.reduce((s,v) => s+v, 0)/lats.length) : null;
     const totalCost = mrows.reduce((s,r) => s+(r.cost_usd||0), 0);
+
     return {
       ...m, id: modelId,
-      macroAcc, macroF1, cleanAcc, augAcc, robustness, deltaClean,
-      avgLat, totalCost, n_conditions: mrows.length,
+      macroAcc, macroF1: macroAcc, macroSource, aggLabels,
+      cleanAcc, augAcc, robustness, deltaClean,
+      avgLat, totalCost, n_conditions: mrows.length, n_runs: myRuns.length,
     };
   }).sort((a,b) => (b.macroAcc||0) - (a.macroAcc||0));
 }

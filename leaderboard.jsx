@@ -109,6 +109,11 @@ function LeaderboardScreen({ datasetId, taskId }) {
                     <td className="num mono">
                       <Ulb.Bar value={s.macroAcc} color={Ulb.accColor(s.macroAcc)} />
                       {Ulb.fmtPct(s.macroAcc)}
+                      {s.aggLabels && s.aggLabels.length > 0 && (
+                        <span className="t-mute" style={{fontSize:"var(--fs-xs)", marginLeft:6}}>
+                          {s.aggLabels.join("/")}
+                        </span>
+                      )}
                     </td>
                     <td className="num mono">{Ulb.fmtPct(s.macroF1)}</td>
                     <td className="num mono">{Ulb.fmtPct(s.cleanAcc)}</td>
