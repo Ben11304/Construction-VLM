@@ -1,0 +1,13 @@
+"""Stable hashes for cache keys."""
+
+from __future__ import annotations
+
+import hashlib
+
+
+def sha1_bytes(data: bytes) -> str:
+    return hashlib.sha1(data).hexdigest()
+
+
+def sha1_text(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()

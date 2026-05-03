@@ -1,0 +1,6 @@
+name: consynthx
+split: test
+n_per_condition: null
+conditions: [rain]
+extra:
+  root: construction_site

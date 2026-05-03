@@ -1,0 +1,18 @@
+# SmolVLM-256M-Instruct — smoke-test VLM cho v0.1 pipeline.
+# Verified từ HF model card 2026-05-03 (license Apache-2.0, Idefics3 arch).
+# Adapter: cveval/models/smolvlm.py
+#
+# Schema: khớp với cveval.config.ModelConfig (Pydantic v2, extra fields đi
+# vào `extra:`).
+
+name: smolvlm-256m
+revision: null              # TODO pin SHA khi production. None = HF mặc định.
+backend: hf
+dtype: bfloat16
+max_new_tokens: 256
+temperature: 0.0
+extra:
+  hf_id: HuggingFaceTB/SmolVLM-256M-Instruct
+  trust_remote_code: false
+  do_sample: false
+  device_pref: auto         # adapter resolve qua cveval.utils.device.select_device()

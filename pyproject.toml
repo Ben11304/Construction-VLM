@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cveval"
+version = "0.1.0"
+description = "ConstructionVLM-Eval — VLM benchmark framework for construction-site domain (ConSynth-X)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Viet Huy Duong" }]
+dependencies = [
+    "pydantic>=2",
+    "pyyaml",
+    "pandas",
+    "pyarrow",
+    "Pillow",
+    "torch",
+    "transformers",
+    "rich",
+    "typer",
+    "jinja2",
+    "duckdb",
+]
+
+[project.optional-dependencies]
+vllm = ["vllm"]
+api = ["openai", "anthropic", "google-generativeai"]
+viz = ["matplotlib", "seaborn"]
+dev = ["pytest", "pytest-asyncio", "ruff", "mypy"]
+
+[project.scripts]
+cveval = "cveval.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["cveval*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"

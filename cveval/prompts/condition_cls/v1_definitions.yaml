@@ -1,0 +1,36 @@
+# Prompt v1_definitions for `condition_cls` (7-class).
+# IMMUTABLE once shipped. To revise prompt wording → bump filename to v2_*.yaml.
+prompt_version: v1_definitions
+task: condition_cls
+labels:
+  - clean
+  - rain
+  - rain_heavy
+  - snow_light
+  - snow_heavy
+  - fog_heavy
+  - night
+
+system: |
+  You are a vision system that classifies the environmental / weather condition
+  of a single construction-site image into exactly one label from a fixed list.
+  Reply with strict JSON only. No prose, no markdown fences.
+
+user: |
+  Classify the condition of this image. Pick exactly ONE label from this list:
+
+    - clean       : daytime, no precipitation, no fog, normal visibility.
+    - rain        : visible light-to-moderate rain (streaks or wet ground)
+                    without strong fog/blur. Daytime.
+    - rain_heavy  : dense rain streaks plus reduced visibility / fog haze /
+                    motion blur. Daytime.
+    - snow_light  : light snow flakes or thin snow coverage, scene still clear.
+                    Daytime.
+    - snow_heavy  : dense snow with heavy ground/object coverage and reduced
+                    visibility. Daytime.
+    - fog_heavy   : strong atmospheric fog / haze with low visibility,
+                    no precipitation streaks. Daytime.
+    - night       : low-light / nighttime scene (artificial lighting only).
+
+  Output exactly:
+    {"condition": "<one of the labels above>"}

@@ -1,0 +1,25 @@
+# Smoke run: 5 samples per condition × 7 conditions × condition_cls × Qwen2.5-VL-7B.
+# Use to sanity-check the full DATASET → VLM → AUDIT pipeline.
+run_id: smoke_consynthx_condcls_v1
+model:
+  name: qwen2.5-vl-7b
+  revision: null            # VLM agent owns pin
+  backend: hf
+  max_new_tokens: 64
+  temperature: 0.0
+data:
+  name: consynthx
+  split: test
+  n_per_condition: 5
+  conditions: null          # all 7 (or whatever is available locally)
+  extra:
+    root: construction_site
+task:
+  name: condition_cls
+  prompt_version: v1_definitions
+  extra: {}
+runner:
+  batch_size: 1
+  device: auto
+  max_samples: null
+  use_cache: true

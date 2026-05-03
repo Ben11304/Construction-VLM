@@ -1,0 +1,23 @@
+# Full v0.1 evaluation: all available conditions, full sample bundle.
+run_id: consynthx_condcls_v1_full
+model:
+  name: qwen2.5-vl-7b
+  revision: null
+  backend: hf
+  max_new_tokens: 64
+  temperature: 0.0
+data:
+  name: consynthx
+  split: test
+  n_per_condition: null
+  conditions: null
+  extra:
+    root: construction_site
+task:
+  name: condition_cls
+  prompt_version: v1_definitions
+  extra: {}
+runner:
+  batch_size: 1
+  device: auto
+  use_cache: true

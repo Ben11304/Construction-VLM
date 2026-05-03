@@ -1,0 +1,6 @@
+name: consynthx
+split: test
+n_per_condition: null
+conditions: [snow_light]
+extra:
+  root: construction_site

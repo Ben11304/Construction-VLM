@@ -1,0 +1,10 @@
+# ConSynth-X release-v1 — 6 augmented glossary conditions on cs10k root, test split.
+# (Glossary 'clean' is NOT in release-v1; adapter drops it and reports via .missing_conditions.)
+# Per-condition breakdown is automatic (each sample carries `condition`).
+name: consynthx
+split: test
+n_per_condition: null
+conditions: null            # null = all glossary conditions resolvable on this root
+extra:
+  root: cs10k               # cs10k = ConstructionSite 10k upstream (primary)
+  data_root: /fs/scratch/PGS0407/binben14/ConSynth-X-release-v1
