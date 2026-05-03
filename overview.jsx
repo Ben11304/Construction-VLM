@@ -184,6 +184,7 @@ function OverviewScreen({ datasetId, taskId, scale, goto }) {
 }
 
 function ScatterPlot({ data }) {
+  const [hover, setHover] = React.useState(null);
   const w = 380, h = 220, pad = 32;
   const filtered = data.filter(d => d.macroAcc != null && d.robustness != null);
   if (!filtered.length) return <div className="t-mute" style={{padding:"20px 0"}}>Not enough data points.</div>;
@@ -191,28 +192,49 @@ function ScatterPlot({ data }) {
   const X = v => pad + ((v - xmin) / (xmax - xmin)) * (w - 2 * pad);
   const Y = v => h - pad - ((v - ymin) / (ymax - ymin)) * (h - 2 * pad);
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:240}}>
-      {[0.25, 0.5, 0.75].map(t => (
-        <line key={"x"+t} x1={X(t)} y1={pad} x2={X(t)} y2={h-pad} stroke="var(--border)" strokeDasharray="2 3" />
-      ))}
-      {[0.25, 0.5, 0.75].map(t => (
-        <line key={"y"+t} x1={pad} y1={Y(t)} x2={w-pad} y2={Y(t)} stroke="var(--border)" strokeDasharray="2 3" />
-      ))}
-      <line x1={pad} y1={h-pad} x2={w-pad} y2={h-pad} stroke="var(--border-2)" />
-      <line x1={pad} y1={pad} x2={pad} y2={h-pad} stroke="var(--border-2)" />
-      <text x={w/2} y={h-6} fontSize="10" fill="var(--text-2)" textAnchor="middle" fontFamily="var(--font-mono)">macro accuracy →</text>
-      <text x={10} y={h/2} fontSize="10" fill="var(--text-2)" textAnchor="middle" fontFamily="var(--font-mono)" transform={`rotate(-90, 10, ${h/2})`}>robustness →</text>
-      {filtered.map(d => (
-        <g key={d.id}>
-          <circle cx={X(d.macroAcc)} cy={Y(d.robustness)} r={d.type === "closed" ? 6 : 5}
-                  fill={d.type === "closed" ? "var(--accent)" : "var(--text-2)"}
-                  fillOpacity="0.85" stroke="var(--bg)" strokeWidth="1.5" />
-          <text x={X(d.macroAcc) + 9} y={Y(d.robustness) + 3} fontSize="9" fill="var(--text-2)" fontFamily="var(--font-mono)">
-            {d.id.split(/[-_]/)[0]}
-          </text>
-        </g>
-      ))}
-    </svg>
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:240}}
+        onMouseLeave={()=>setHover(null)}>
+        {[0.25, 0.5, 0.75].map(t => (
+          <line key={"x"+t} x1={X(t)} y1={pad} x2={X(t)} y2={h-pad} stroke="var(--border)" strokeDasharray="2 3" />
+        ))}
+        {[0.25, 0.5, 0.75].map(t => (
+          <line key={"y"+t} x1={pad} y1={Y(t)} x2={w-pad} y2={Y(t)} stroke="var(--border)" strokeDasharray="2 3" />
+        ))}
+        <line x1={pad} y1={h-pad} x2={w-pad} y2={h-pad} stroke="var(--border-2)" />
+        <line x1={pad} y1={pad} x2={pad} y2={h-pad} stroke="var(--border-2)" />
+        <text x={w/2} y={h-6} fontSize="10" fill="var(--text-2)" textAnchor="middle" fontFamily="var(--font-mono)">macro accuracy →</text>
+        <text x={10} y={h/2} fontSize="10" fill="var(--text-2)" textAnchor="middle" fontFamily="var(--font-mono)" transform={`rotate(-90, 10, ${h/2})`}>robustness →</text>
+        {filtered.map(d => {
+          const cx = X(d.macroAcc), cy = Y(d.robustness);
+          const isHover = hover && hover.id === d.id;
+          return (
+            <g key={d.id}>
+              <circle cx={cx} cy={cy} r={isHover ? 8 : (d.type === "closed" ? 6 : 5)}
+                fill={d.type === "closed" ? "var(--accent)" : "var(--text-2)"}
+                fillOpacity="0.85" stroke="var(--bg)" strokeWidth="1.5"
+                className="hover-target"
+                onMouseEnter={()=>setHover({...d, svgX: cx, svgY: cy})} />
+              <text x={cx + 9} y={cy + 3} fontSize="9" fill="var(--text-2)" fontFamily="var(--font-mono)">
+                {d.id.split(/[-_]/)[0]}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      {hover && (
+        <div className="tooltip" style={{
+          left: `${(hover.svgX / w) * 100}%`,
+          top: `${(hover.svgY / h) * 100}%`,
+        }}>
+          <div className="tt-title">{hover.id}</div>
+          <div className="tt-row"><span className="tt-label">macro acc</span><span className="tt-val">{Uov.fmtPct(hover.macroAcc)}</span></div>
+          <div className="tt-row"><span className="tt-label">robustness</span><span className="tt-val">{(hover.robustness*100).toFixed(1)}</span></div>
+          <div className="tt-row"><span className="tt-label">clean</span><span className="tt-val">{Uov.fmtPct(hover.cleanAcc)}</span></div>
+          <div className="tt-row"><span className="tt-label">aug avg</span><span className="tt-val">{Uov.fmtPct(hover.augAcc)}</span></div>
+        </div>
+      )}
+    </div>
   );
 }
 

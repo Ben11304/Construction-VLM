@@ -155,6 +155,7 @@ function LeaderboardScreen({ datasetId, taskId, scale }) {
 }
 
 function PerConditionLines({ summary, datasetId, taskId, scale }) {
+  const [hoverIdx, setHoverIdx] = useStateLB(null);
   const conds = Ulb.conditionsOf(datasetId);
   const matrix = Ulb.matrixFor(datasetId, taskId, scale);
   const colors = ["var(--accent)", "var(--sev-1)", "var(--sev-2)", "var(--sev-3)"];
@@ -181,32 +182,74 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
   const ticks = [0, yMax/2, yMax];
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:220}}>
-      {ticks.map(t => (
-        <line key={t} x1={pad} y1={Y(t)} x2={w-pad} y2={Y(t)} stroke="var(--border)" strokeDasharray="2 3" />
-      ))}
-      {ticks.map(t => (
-        <text key={t} x={pad-6} y={Y(t)+3} fontSize="9" fill="var(--muted)" textAnchor="end" fontFamily="var(--font-mono)">{fmt(t)}</text>
-      ))}
-      {conds.map((c,i) => (
-        <text key={c.key} x={X(i)} y={h-pad+14} fontSize="9" fill="var(--muted)" textAnchor="middle" fontFamily="var(--font-mono)">{c.key.slice(0,6)}</text>
-      ))}
-      {summary.map((m, mi) => {
-        const pts = conds.map((c,i) => {
-          const row = matrix.find(r => r.model === m.id && r.condition === c.key);
-          return row && row.acc != null ? [X(i), Y(row.acc)] : null;
-        }).filter(Boolean);
-        if (pts.length < 2) return null;
-        const d = pts.map((p,i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
-        return (
-          <g key={m.id}>
-            <path d={d} stroke={colors[mi % colors.length]} fill="none" strokeWidth="1.8" />
-            {pts.map((p,i) => <circle key={i} cx={p[0]} cy={p[1]} r="3" fill={colors[mi % colors.length]} />)}
-            <text x={pts[pts.length-1][0]+6} y={pts[pts.length-1][1]+3} fontSize="9" fill={colors[mi % colors.length]} fontFamily="var(--font-mono)">{m.id.split(/[-_]/)[0]}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:220}}
+        onMouseLeave={()=>setHoverIdx(null)}>
+        {ticks.map(t => (
+          <line key={t} x1={pad} y1={Y(t)} x2={w-pad} y2={Y(t)} stroke="var(--border)" strokeDasharray="2 3" />
+        ))}
+        {ticks.map(t => (
+          <text key={t} x={pad-6} y={Y(t)+3} fontSize="9" fill="var(--muted)" textAnchor="end" fontFamily="var(--font-mono)">{fmt(t)}</text>
+        ))}
+        {conds.map((c,i) => (
+          <text key={c.key} x={X(i)} y={h-pad+14} fontSize="9" fill="var(--muted)" textAnchor="middle" fontFamily="var(--font-mono)">{c.key.slice(0,6)}</text>
+        ))}
+        {/* hover guide */}
+        {hoverIdx != null && (
+          <line className="hover-vline" x1={X(hoverIdx)} y1={pad} x2={X(hoverIdx)} y2={h-pad}
+            stroke="var(--accent)" strokeOpacity="0.5" />
+        )}
+        {/* invisible hover bands per condition */}
+        {conds.map((c,i) => {
+          const w_band = (w - 2*pad) / Math.max(1, conds.length - 1);
+          return (
+            <rect key={c.key} x={X(i) - w_band/2} y={pad} width={w_band} height={h - 2*pad}
+              fill="transparent"
+              onMouseEnter={()=>setHoverIdx(i)} />
+          );
+        })}
+        {summary.map((m, mi) => {
+          const pts = conds.map((c,i) => {
+            const row = matrix.find(r => r.model === m.id && r.condition === c.key);
+            return row && row.acc != null ? [X(i), Y(row.acc), row.acc] : null;
+          });
+          const valid = pts.filter(Boolean);
+          if (valid.length < 2) return null;
+          const d = valid.map((p,i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+          return (
+            <g key={m.id}>
+              <path d={d} stroke={colors[mi % colors.length]} fill="none" strokeWidth="1.8" />
+              {pts.map((p, i) => p ? (
+                <circle key={i} cx={p[0]} cy={p[1]}
+                  r={hoverIdx === i ? 5 : 3}
+                  fill={colors[mi % colors.length]} />
+              ) : null)}
+              <text x={valid[valid.length-1][0]+6} y={valid[valid.length-1][1]+3} fontSize="9" fill={colors[mi % colors.length]} fontFamily="var(--font-mono)">{m.id.split(/[-_]/)[0]}</text>
+            </g>
+          );
+        })}
+      </svg>
+      {hoverIdx != null && (
+        <div className="tooltip" style={{
+          left: `${(X(hoverIdx) / w) * 100}%`,
+          top: `${(pad / h) * 100}%`,
+        }}>
+          <div className="tt-title">{conds[hoverIdx].label}</div>
+          {summary.map((m, mi) => {
+            const row = matrix.find(r => r.model === m.id && r.condition === conds[hoverIdx].key);
+            return (
+              <div key={m.id} className="tt-row">
+                <span className="tt-label">
+                  <span className="swatch" style={{background: colors[mi % colors.length]}} />
+                  {m.id.split(/[-_]/)[0]}
+                </span>
+                <span className="tt-val">{row && row.acc != null ? fmt(row.acc) : "—"}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

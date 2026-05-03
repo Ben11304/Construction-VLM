@@ -526,6 +526,32 @@ body {
   display: block;
 }
 
+/* ===== Interactive tooltips ===== */
+.chart-wrap { position: relative; }
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  white-space: nowrap;
+  z-index: 10;
+  transform: translate(-50%, -130%);
+}
+.tooltip .tt-title { color: var(--text); font-weight: 500; margin-bottom: 4px; }
+.tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; line-height: 1.5; }
+.tooltip .tt-row .tt-label { color: var(--text-2); }
+.tooltip .tt-row .tt-val { color: var(--text); font-variant-numeric: tabular-nums; }
+.tooltip .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.hover-target { cursor: pointer; transition: r 0.1s ease; }
+.hover-target:hover { stroke: var(--text); stroke-width: 1.5; }
+.hover-vline { pointer-events: none; }
+
 /* scrollbars (subtle) */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

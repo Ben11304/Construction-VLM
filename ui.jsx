@@ -154,6 +154,7 @@ function Bar({ value, max = 1, color }) {
 function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
+  const [hover, setHover] = useState(null); // {x, y, model, condition, value, color}
   const ds = getDataset(datasetId);
   if (!ds) return null;
   const conds = ds.conditions;
@@ -214,8 +215,13 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
     return real.toFixed(3);
   };
 
+  const fmtVal = (v) => v == null ? "—"
+    : axisMax >= 0.5 ? `${(v*100).toFixed(2)}%`
+    : axisMax >= 0.05 ? `${(v*100).toFixed(2)}%`
+    : v.toFixed(4);
+
   return (
-    <div>
+    <div className="chart-wrap">
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
         <span className="t-mute mono" style={{fontSize:"var(--fs-xs)"}}>
           axis max: {fmtTick(1)} {autoScale ? "(auto)" : "(fixed)"}
@@ -226,7 +232,7 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
           {autoScale ? "auto-scale" : "0–100%"}
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}}>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}} onMouseLeave={()=>setHover(null)}>
         {rings.map((v, i) => (
           <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
         ))}
@@ -264,16 +270,37 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
               {pts.map((p, i) => {
                 const row = matrix.find(r => r.model === mid && r.condition === conds[i].key);
                 const v = row && row.acc != null ? row.acc : null;
-                return v != null ? (
-                  <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill={color}>
-                    <title>{`${mid} · ${conds[i].label} = ${axisMax >= 0.05 ? (v*100).toFixed(2)+'%' : v.toFixed(4)}`}</title>
-                  </circle>
-                ) : null;
+                if (v == null) return null;
+                const isHover = hover && hover.model === mid && hover.condition === conds[i].key;
+                return (
+                  <circle key={i} cx={p[0]} cy={p[1]} r={isHover ? 5 : 3}
+                    fill={color} className="hover-target"
+                    onMouseEnter={()=>setHover({
+                      svgX: p[0], svgY: p[1],
+                      model: mid, condition: conds[i].label, value: v, color,
+                    })}
+                  />
+                );
               })}
             </g>
           );
         })}
       </svg>
+      {hover && (
+        <div className="tooltip" style={{
+          left: `${(hover.svgX / w) * 100}%`,
+          top: `${(hover.svgY / h) * 100}%`,
+        }}>
+          <div className="tt-title">
+            <span className="swatch" style={{background: hover.color}} />
+            {hover.model}
+          </div>
+          <div className="tt-row">
+            <span className="tt-label">{hover.condition}</span>
+            <span className="tt-val">{fmtVal(hover.value)}</span>
+          </div>
+        </div>
+      )}
       <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:8, justifyContent:"center"}}>
         {allModelIds.map((mid, mi) => {
           const isHidden = hidden.has(mid);

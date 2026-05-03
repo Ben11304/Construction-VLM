@@ -6,6 +6,7 @@ const Urm = window.__UI;
 function RobustnessScreen({ datasetId, taskId, scale }) {
   const [metric, setMetric] = useStateRM("acc");
   const [selected, setSelected] = useStateRM(null);
+  const [hover, setHover] = useStateRM(null);
   const ds = Urm.getDataset(datasetId);
   const conds = ds ? ds.conditions : [];
   const matrix = ds ? Urm.matrixFor(ds.id, taskId, scale) : [];
@@ -73,6 +74,22 @@ function RobustnessScreen({ datasetId, taskId, scale }) {
         </div>
       </div>
 
+      {hover && !selected && (
+        <div style={{
+          marginBottom: 8, padding: "6px 10px",
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: "var(--radius)", fontSize: "var(--fs-xs)",
+          fontFamily: "var(--font-mono)", display:"inline-block",
+        }}>
+          <span style={{color:"var(--text)"}}>{hover.model}</span>
+          <span className="t-mute"> · {hover.family} · {hover.params} · </span>
+          <span style={{color:"var(--text)"}}>{hover.condition}</span>
+          <span className="t-mute"> = </span>
+          <span style={{color:"var(--accent)", fontWeight:500}}>
+            {hover.value == null ? "—" : metric === "delta" ? `${(hover.value*100).toFixed(2)}pp` : `${(hover.value*100).toFixed(2)}%`}
+          </span>
+        </div>
+      )}
       <div style={{display:"grid", gridTemplateColumns: selected ? "1fr 360px" : "1.4fr 1fr", gap: 16}}>
         <div className="card">
           <div className="card-body">
@@ -109,6 +126,9 @@ function RobustnessScreen({ datasetId, taskId, scale }) {
                             : (v != null && v > 0.7 ? "var(--bg)" : "var(--text)"),
                         }}
                         onClick={() => setSelected({model: m.id, condition: c.key})}
+                        onMouseEnter={() => setHover({model: m.id, condition: c.label, value: v, family: m.family, params: m.params})}
+                        onMouseLeave={() => setHover(null)}
+                        title={`${m.id} · ${c.label}`}
                       >
                         {fmtCell(v)}
                       </div>
