@@ -1,0 +1,6 @@
+/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/utils/hub.py:110: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/auto/modeling_auto.py:2284: FutureWarning: The class `AutoModelForVision2Seq` is deprecated and will be removed in v5.0. Please use `AutoModelForImageTextToText` instead.
+  warnings.warn(
+`torch_dtype` is deprecated! Use `dtype` instead!
+2026-05-03 11:43:11,685 [INFO] cveval.runner.local_runner: Wrote 30 rows to results/smoke_smolvlm_condcls_v1/predictions.parquet

@@ -1,0 +1,21 @@
+{
+  "datasets": [
+    {
+      "name": "consynthx",
+      "cls_qualname": "cveval.data.consynthx.ConSynthXDataset"
+    }
+  ],
+  "models": [
+    {
+      "name": "smolvlm-256m",
+      "cls_qualname": "cveval.models.smolvlm.SmolVLM"
+    }
+  ],
+  "tasks": [
+    {
+      "name": "condition_cls",
+      "cls_qualname": "cveval.tasks.condition_cls.ConditionClsTask"
+    }
+  ],
+  "metrics": []
+}

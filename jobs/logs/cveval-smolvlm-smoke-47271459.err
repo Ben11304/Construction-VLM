@@ -1,0 +1,55 @@
+Lmod has detected the following error: These module(s) or extension(s) exist
+but cannot be loaded as requested: "cuda"
+
+   You encountered this error for one of the following reasons:
+   1. Missing version specification: On Pitzer, you must specify an available
+version.
+   2. Missing required modules: Ensure you have loaded the appropriate compiler
+and MPI modules.
+
+   Try: "module spider cuda" to view available versions or required modules.
+
+   If you need further assistance, please contact oschelp@osc.edu with the
+subject line "lmod error: cuda"
+
+
+
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /users/PGS0407/binben14/VietHuy/ConstructionVLM-Eval/cveval/cli.py:58 in     │
+│ run_cmd                                                                      │
+│                                                                              │
+│   55 │   │   │   ),                                                          │
+│   56 │   │   )                                                               │
+│   57 │                                                                       │
+│ ❱ 58 │   path = LocalRunner(cfg).run()                                       │
+│   59 │   typer.echo(f"Wrote: {path}")                                        │
+│   60                                                                         │
+│   61                                                                         │
+│                                                                              │
+│ /users/PGS0407/binben14/VietHuy/ConstructionVLM-Eval/cveval/runner/local_run │
+│ ner.py:38 in __init__                                                        │
+│                                                                              │
+│    35 │   │   │   if config.runner.use_cache                                 │
+│    36 │   │   │   else None                                                  │
+│    37 │   │   )                                                              │
+│ ❱  38 │   │   self._dataset_cls = self._lookup(DATASET_REGISTRY,             │
+│       config.data.name, "dataset")                                           │
+│    39 │   │   self._model_cls = self._lookup(MODEL_REGISTRY,                 │
+│       config.model.name, "model")                                            │
+│    40 │   │   self._task_cls = self._lookup(TASK_REGISTRY, config.task.name, │
+│       "task")                                                                │
+│    41                                                                        │
+│                                                                              │
+│ /users/PGS0407/binben14/VietHuy/ConstructionVLM-Eval/cveval/runner/local_run │
+│ ner.py:45 in _lookup                                                         │
+│                                                                              │
+│    42 │   @staticmethod                                                      │
+│    43 │   def _lookup(reg: dict, key: str, kind: str):                       │
+│    44 │   │   if key not in reg:                                             │
+│ ❱  45 │   │   │   raise KeyError(                                            │
+│    46 │   │   │   │   f"{kind} {key!r} not registered. Available:            │
+│       {sorted(reg.keys())}"                                                  │
+│    47 │   │   │   )                                                          │
+│    48 │   │   return reg[key]                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+KeyError: "dataset 'consynthx' not registered. Available: []"

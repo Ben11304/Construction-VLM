@@ -1,0 +1,15 @@
+[
+  {
+    "run_id": "smoke_smolvlm_condcls_v1",
+    "model": "smolvlm-256m",
+    "dataset": "consynthx",
+    "task": "condition_cls",
+    "n_rows": 30,
+    "accuracy": 0.26666666666666666,
+    "latency_p50_ms": 574.0,
+    "cost_usd": null,
+    "started_at": "2026-05-03T15:43:11.683892+00:00",
+    "parquet_path": "results/smoke_smolvlm_condcls_v1/predictions.parquet",
+    "config_path": "results/smoke_smolvlm_condcls_v1/effective_config.yaml"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "agent": "AUDIT",
+    "version": "0.1.0",
+    "last_updated": "2026-05-03 by AUDIT \u2014 first audit pass",
+    "artifacts_count": 1
+  },
+  {
+    "agent": "DATASET",
+    "version": "1.2.1",
+    "last_updated": "2026-05-03 by DATASET \u2014 fix `__init__(cfg)` contract",
+    "artifacts_count": 5
+  },
+  {
+    "agent": "FRAMEWORK",
+    "version": "0.2.0",
+    "last_updated": "2026-05-03 by FRAMEWORK skeleton scaffold",
+    "artifacts_count": 11
+  },
+  {
+    "agent": "VLM",
+    "version": "0.1.0",
+    "last_updated": "2026-05-03 by VLM \u2014 first successful run (smoke_smolvlm_condcls_v1)",
+    "artifacts_count": 2
+  }
+]

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manifests — Admin</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <h1>cveval admin
+      <small>v0.1.0</small>
+    </h1>
+      <a href="index.html" >Overview</a>
+      <a href="datasets.html" >Datasets</a>
+      <a href="models.html" >Models</a>
+      <a href="tasks.html" >Tasks</a>
+      <a href="metrics.html" >Metrics</a>
+      <a href="runs.html" >Runs</a>
+      <a href="manifests.html" class="active">Manifests</a>
+  </nav>
+  <main class="main">
+<h2>Manifests <span class="meta">(4)</span></h2>
+<section id="AUDIT">
+  <h3>AUDIT
+    <span class="badge good">v0.1.0</span>
+    <span class="meta">· last updated 2026-05-03 by AUDIT — first audit pass · 1 artifacts</span>
+  </h3>
+  <div class="markdown"><h1>Manifest — AUDIT → user</h1>
+<h2>Version</h2>
+<p>0.1.0</p>
+<p>Bump rule:
+- New audit report → minor.
+- Schema/format change of report → major.
+- Metadata polish → patch.</p>
+<h2>Last updated</h2>
+<p>2026-05-03 by AUDIT — first audit pass</p>
+<h2>Artifacts</h2>
+<h3>audit_report_2026-05-03</h3>
+<ul>
+<li>Path: outputs/audit_report_2026-05-03.md</li>
+<li>Type: targeted (result sanity + manifest drift)</li>
+<li>Manifest versions reviewed:</li>
+<li>FRAMEWORK: 0.2.0</li>
+<li>DATASET: 1.1.1</li>
+<li>VLM: 0.1.0</li>
+<li>Run audited: <code>smoke_smolvlm_condcls_v1</code></li>
+<li>Findings: 0 critical, 2 error, 1 warn, 3 info</li>
+<li>Status: ready</li>
+</ul>
+<h2>Removed/Deprecated</h2>
+<p>(none)</p></div>
+</section>
+<section id="DATASET">
+  <h3>DATASET
+    <span class="badge good">v1.2.1</span>
+    <span class="meta">· last updated 2026-05-03 by DATASET — fix `__init__(cfg)` contract · 5 artifacts</span>
+  </h3>
+  <div class="markdown"><h1>Manifest — DATASET → VLM</h1>
+<h2>Version</h2>
+<p>1.2.1</p>
+<p>Bump rule:
+- Adapter signature / GT schema đổi → major.
+- Thêm dataset / task / metric giữ schema cũ → minor.
+- Doc / citation polish → patch.
+- 1.0.0 → 1.1.0: adapter target chuyển từ <code>augmentation_data_sample</code> (Kaggle v6, Arrow IPC) sang <strong>release-v1 parquet trên scratch</strong>.
+- 1.1.0 → 1.1.1: adapter <code>__init__</code> refactor sang BaseDataset v1.0.0 contract <code>(cfg: DataConfig)</code> — fix runner crash (Job 47271527).
+- 1.1.1 → 1.2.0: adapter thêm reproducible random sampling per condition (<code>extra.sample_seed</code>). Backward-compat (không seed → head-cap như cũ). New field → minor bump.
+- 1.2.0 → 1.2.1: glossary <code>clean</code> mapped to release <code>cs10k/parquet/original/</code> (3,004 rows, shipped 2026-05-03). <code>_NOT_IN_RELEASE</code> empty; all 7 glossary conditions reachable on cs10k. Schema/contract unchanged → patch.</p>
+<h2>Last updated</h2>
+<p>2026-05-03 by DATASET — fix <code>__init__(cfg)</code> contract</p>
+<h2>Artifacts</h2>
+<h3>dataset:consynthx</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/data/consynthx.py</code></li>
+<li><strong>Format</strong>: py-module (BaseDataset adapter, registry key <code>consynthx</code>)</li>
+<li><strong>Schema yielded</strong>: <code>DatasetSample(image_bytes, gt={"condition","severity"}, image_id="&lt;glossary_cond&gt;/&lt;id&gt;", condition, severity, extra={"root","shard","upstream_gt": {objects, image_attributes, rule_violations, pipeline, quality_scores, quality_alert, condition_labels, source_id, source_dataset, release_condition}})</code></li>
+<li><strong>Constructor</strong>: <code>__init__(cfg: DataConfig)</code> — runner path. Reads <code>cfg.split</code>, <code>cfg.conditions</code>, <code>cfg.n_per_condition</code>; pulls <code>extra["root"]</code> (default <code>cs10k</code>), <code>extra["data_root"]</code>, <code>extra["sample_seed"]</code> from <code>cfg.extra</code>.</li>
+<li><strong>Sampling</strong>: when <code>extra.sample_seed</code> is set AND <code>n_per_condition &lt; total</code>, adapter draws a reproducible random subset per condition (per-condition seed = <code>base_seed * 1_000_003 + sum(ord(c))</code>, independent permutations across conditions). Else head-cap (legacy behavior).</li>
+<li><strong>Version</strong>: 1.2.0</li>
+<li><strong>Source layout</strong>: <code>&lt;data_root&gt;/&lt;root&gt;/parquet/&lt;release_condition&gt;/{train__,test__,}*.parquet</code> (release-v1 harmonized schema).</li>
+<li><strong>Default data_root</strong>: <code>/fs/scratch/PGS0407/binben14/ConSynth-X-release-v1</code> (override via <code>DataConfig.extra.data_root</code> or <code>$CONSYNTH_DATA_ROOT</code>).</li>
+<li><strong>Roots supported</strong>: <code>cs10k</code> (default; ConstructionSite 10k upstream), <code>soda_voc</code>, <code>soda_ktsh</code>.</li>
+<li><strong>Glossary conditions exposed</strong>: <code>clean, rain, rain_heavy, snow_light, snow_heavy, fog_heavy, night</code> — all 7 reachable on cs10k as of 2026-05-03 (<code>clean</code> aliases to release dir <code>original/</code>, 3,004 rows).</li>
+<li><strong>Extended release conditions</strong>: <code>rain_light, fog_light, fog_medium, rain_night, snow_night, small</code> — opt-in by passing <code>conditions=[…]</code> explicitly.</li>
+<li><strong>Glossary→release alias</strong>: <code>rain → rain_light</code>. Adapter tags samples with the <strong>glossary</strong> name so metric breakdowns stay in glossary vocab.</li>
+<li><strong>Split filtering</strong>: files prefixed <code>train__</code>/<code>test__</code> filter on <code>split</code>; unprefixed (e.g. <code>fog_heavy.parquet</code>) load for either split.</li>
+<li><strong>License</strong>: CC-BY-NC-4.0 (kế thừa upstream cs10k). HF dataset card v1 ghi CC0-1.0 — <code>[VERIFY]</code> conflict.</li>
+<li><strong>Status</strong>: ready (verified 2026-05-03 against real shards on /fs/scratch — 9/9 REQUIRES_DATA tests pass).</li>
+</ul>
+<h3>task:condition_cls</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/tasks/condition_cls.py</code></li>
+<li><strong>Schema</strong>: 7-class single-label; output <code>{"condition": "&lt;label&gt;"}</code></li>
+<li><strong>Constructor</strong>: <code>__init__(cfg: TaskConfig | str | None)</code> — accepts TaskConfig (runner path), prompt_version str, or None (default v1_definitions).</li>
+<li><strong>Prompt</strong>: <code>cveval/prompts/condition_cls/v1_definitions.yaml</code> (immutable)</li>
+<li><strong>Parser</strong>: 3-gate (JSON → longest-match substring → "unknown" sentinel). Never raises.</li>
+<li><strong>Score</strong>: <code>{correct: 0|1|None, parse_error: bool, pred, gt}</code>.</li>
+<li><strong>Version</strong>: 1.0.1 (constructor signature accepts TaskConfig; behavior unchanged)</li>
+<li><strong>Note</strong>: vocab still includes <code>clean</code> for forward-compatibility. With release-v1 as the only data source, <code>clean</code> rows simply don't appear → metric per_condition shows <code>support=0</code> for clean.</li>
+<li><strong>Status</strong>: ready</li>
+</ul>
+<h3>metric:classification</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/metrics/classification.py</code></li>
+<li><strong>Schema returned</strong>: <code>{n, accuracy, macro_f1, parse_error_rate, per_condition: {label: {precision, recall, f1, support}}, confusion_matrix: {rows_gt, cols_pred, matrix}}</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Status</strong>: ready</li>
+</ul>
+<h3>prompt:condition_cls/v1_definitions</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/prompts/condition_cls/v1_definitions.yaml</code></li>
+<li><strong>Version</strong>: v1_definitions (immutable)</li>
+</ul>
+<h3>configs</h3>
+<ul>
+<li>Per-condition data configs (8): <code>configs/data/consynthx_{all,clean,rain,rain_heavy,snow_light,snow_heavy,fog_heavy,night}.yaml</code> — all pin <code>data_root: /fs/scratch/PGS0407/binben14/ConSynth-X-release-v1</code>.</li>
+<li>Task: <code>configs/tasks/condition_cls.yaml</code>.</li>
+<li>Runs: <code>configs/runs/consynthx_condition_cls_{smoke,full}.yaml</code>.</li>
+<li><strong>Status</strong>: ready</li>
+</ul>
+<h2>Removed/Deprecated</h2>
+<p>(none)</p></div>
+</section>
+<section id="FRAMEWORK">
+  <h3>FRAMEWORK
+    <span class="badge good">v0.2.0</span>
+    <span class="meta">· last updated 2026-05-03 by FRAMEWORK skeleton scaffold · 11 artifacts</span>
+  </h3>
+  <div class="markdown"><h1>Manifest — FRAMEWORK → DATASET, VLM, AUDIT</h1>
+<h2>Version</h2>
+<p>0.2.0</p>
+<p>Bump rule (theo <code>shared/handoff_schema.md</code>):
+- ABC signature đổi → major.
+- Thêm registry / utility / new contract giữ schema cũ → minor.
+- Doc / metadata → patch.</p>
+<h2>Last updated</h2>
+<p>2026-05-03 by FRAMEWORK skeleton scaffold</p>
+<h2>Artifacts</h2>
+<h3>BaseDataset</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/data/base.py</code></li>
+<li><strong>Format</strong>: py-module (ABC + Pydantic <code>DatasetSample</code>)</li>
+<li><strong>Schema</strong>: <code>__iter__() -&gt; Iterator[DatasetSample]</code>, <code>__len__()</code>, <code>conditions: list[str]</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Source</strong>: <code>cveval/data/base.py</code></li>
+<li><strong>Status</strong>: ready</li>
+<li><strong>Notes</strong>: <code>DatasetSample</code> fields: <code>image_bytes, gt, image_id, condition, severity?, extra</code>. Adapter set <code>severity=None</code> nếu không có.</li>
+</ul>
+<h3>BaseVLM</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/models/base.py</code></li>
+<li><strong>Format</strong>: py-module (ABC + Pydantic <code>ChatMessage</code>, <code>ChatContent</code>, <code>GenerateResult</code>)</li>
+<li><strong>Schema</strong>: <code>__init__(config: ModelConfig)</code>, <code>generate(messages: list[ChatMessage], *, max_new_tokens, temperature, **kw) -&gt; GenerateResult</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Source</strong>: <code>cveval/models/base.py</code></li>
+<li><strong>Status</strong>: ready</li>
+<li><strong>Notes</strong>: <code>ChatContent.image_bytes</code> raw bytes — adapter tự convert; KHÔNG hard-code device, dùng <code>cveval.utils.device.select_device</code>.</li>
+</ul>
+<h3>BaseTask</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/tasks/base.py</code></li>
+<li><strong>Format</strong>: py-module (ABC)</li>
+<li><strong>Schema</strong>: <code>build_prompt(sample) -&gt; list[ChatMessage]</code>, <code>parse_output(raw) -&gt; dict</code>, <code>score(parsed, gt) -&gt; dict</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Source</strong>: <code>cveval/tasks/base.py</code></li>
+<li><strong>Status</strong>: ready</li>
+<li><strong>Notes</strong>: <code>parse_output</code> MUST NOT raise — return <code>{"...": "unknown"}</code> sentinel.</li>
+</ul>
+<h3>Registries (DATASET / MODEL / TASK)</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/{data,models,tasks}/registry.py</code></li>
+<li><strong>Format</strong>: py-module</li>
+<li><strong>Schema</strong>: <code>register_&lt;kind&gt;(name)</code> decorator; <code>&lt;KIND&gt;_REGISTRY: dict[str, type]</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Notes</strong>: Duplicate name raises <code>ValueError</code>. Registry key conventions: see <code>shared/glossary.md</code> §Naming.</li>
+</ul>
+<h3>RunConfig (Pydantic v2)</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/config.py</code></li>
+<li><strong>Format</strong>: py-module (Pydantic v2 models)</li>
+<li><strong>Schema</strong>: <code>RunConfig{run_id, model: ModelConfig, data: DataConfig, task: TaskConfig, runner: RunnerConfig}</code>; <code>extra="forbid"</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Source</strong>: <code>cveval/config.py</code></li>
+<li><strong>Status</strong>: ready</li>
+</ul>
+<h3>Result schema (canonical parquet)</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/runner/parquet_writer.py</code></li>
+<li><strong>Format</strong>: parquet</li>
+<li><strong>Schema</strong>: cols = <code>model, dataset, condition, severity, image_id, task, prompt_version, raw_output, parsed, gt, score, latency_ms, tokens_in, tokens_out, cost_usd, error, run_id</code></li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Notes</strong>: Authoritative spec ở <code>docs/context/01_architecture.md</code> §Result schema. Bump major nếu đổi cột.</li>
+</ul>
+<h3>LocalRunner</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/runner/local_runner.py</code></li>
+<li><strong>Format</strong>: py-module</li>
+<li><strong>Schema</strong>: <code>LocalRunner(config).run() -&gt; Path</code> (predictions.parquet)</li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Status</strong>: ready</li>
+<li><strong>Notes</strong>: Sync sequential. Cache key = <code>(model, image_hash, prompt_hash, prompt_version, task)</code>. AsyncRunner cho API adapter sẽ thêm sau.</li>
+</ul>
+<h3>Utils</h3>
+<ul>
+<li><code>cveval/utils/device.py</code> — <code>select_device(prefer)</code> v1.0.0</li>
+<li><code>cveval/utils/parsers.py</code> — <code>try_json</code>, <code>match_label</code> v1.0.0</li>
+<li><code>cveval/utils/cache.py</code> — <code>ResponseCache</code> v1.0.0</li>
+<li><code>cveval/utils/hashing.py</code> — <code>sha1_bytes</code>, <code>sha1_text</code> v1.0.0</li>
+<li><code>cveval/utils/image_io.py</code> — <code>bytes_to_pil</code>, <code>path_to_bytes</code> v1.0.0</li>
+</ul>
+<h3>CLI</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/cli.py</code></li>
+<li><strong>Format</strong>: Typer entry (<code>cveval run</code>, <code>cveval list &lt;kind&gt;</code>)</li>
+<li><strong>Version</strong>: 1.0.0</li>
+</ul>
+<h3>Reporting</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/reporting/leaderboard.py</code></li>
+<li><strong>Schema</strong>: <code>render_leaderboard(parquet_path, out_path) -&gt; Path</code></li>
+<li><strong>Version</strong>: 0.1.0 (stub — chỉ accuracy table)</li>
+</ul>
+<h3>Dashboard (admin static site)</h3>
+<ul>
+<li><strong>Path</strong>: <code>cveval/dashboard/</code> (builder + Jinja2 templates + static CSS)</li>
+<li><strong>Format</strong>: Python module → static HTML site</li>
+<li><strong>Schema</strong>: <code>build_site(out_dir, agent_root, results_root, repo_url=None) -&gt; Path</code></li>
+<li><strong>CLI</strong>: <code>cveval dashboard build --out site/ [--agent-root AGENT --results-root results --repo-url URL]</code></li>
+<li><strong>Pages</strong>: index, datasets, models, tasks, metrics, runs, manifests, runs/<run_id></li>
+<li><strong>JSON exports</strong>: <code>site/data/{runs,manifests,registries}.json</code></li>
+<li><strong>Deploy</strong>: <code>scripts/publish_dashboard.sh</code> — orphan branch (default <code>gh-pages</code>) cho GitHub Pages</li>
+<li><strong>Reads</strong>: registries (auto-discovery của adapter modules), <code>AGENT/&lt;agent&gt;/outputs/manifest.md</code>, <code>results/&lt;run_id&gt;/predictions.parquet</code> + <code>effective_config.yaml</code></li>
+<li><strong>KHÔNG đọc</strong>: <code>AGENT/&lt;agent&gt;/state/</code>, <code>AGENT/&lt;agent&gt;/context/</code>, weights, raw images</li>
+<li><strong>Optional deps</strong>: <code>pip install -e ".[ui]"</code> (chỉ thêm <code>markdown</code>)</li>
+<li><strong>Version</strong>: 1.0.0</li>
+<li><strong>Status</strong>: ready</li>
+</ul>
+<h2>[PROPOSED] Decisions cần user xác nhận</h2>
+<ol>
+<li><strong>Runner concurrency v0.1</strong>: sync sequential (<code>LocalRunner</code>). AsyncRunner thêm khi VLM cần API adapter.</li>
+<li><strong>Cache key</strong>: <code>(model, image_hash, prompt_hash, prompt_version, task)</code> — thêm <code>task</code> để chống collision.</li>
+<li><strong>Reporting</strong>: nằm trong FRAMEWORK (<code>cveval/reporting/</code>) vì chỉ đọc parquet.</li>
+</ol>
+<p>User xác nhận → chuyển sang <code>Decisions</code> chính thức ở <code>shared/scope_decisions.md</code>.</p>
+<h2>Removed/Deprecated</h2>
+<p>(none)</p></div>
+</section>
+<section id="VLM">
+  <h3>VLM
+    <span class="badge good">v0.1.0</span>
+    <span class="meta">· last updated 2026-05-03 by VLM — first successful run (smoke_smolvlm_condcls_v1) · 2 artifacts</span>
+  </h3>
+  <div class="markdown"><h1>Manifest — VLM → AUDIT</h1>
+<h2>Version</h2>
+<p>0.1.0</p>
+<p>Bump rule:
+- Result schema parquet đổi → major.
+- Thêm run / model adapter giữ schema cũ → minor.
+- Metadata (tag, description) → patch.</p>
+<h2>Last updated</h2>
+<p>2026-05-03 by VLM — first successful run (smoke_smolvlm_condcls_v1)</p>
+<h2>Artifacts</h2>
+<h3>run:smoke_smolvlm_condcls_v1</h3>
+<ul>
+<li>Path: <code>results/smoke_smolvlm_condcls_v1/predictions.parquet</code></li>
+<li>Format: parquet (canonical schema — model, dataset, condition, severity,
+  image_id, task, prompt_version, raw_output, parsed, gt, score, latency_ms,
+  tokens_in, tokens_out, cost_usd, error, run_id)</li>
+<li>Model: <code>smolvlm-256m</code> (HuggingFaceTB/SmolVLM-256M-Instruct, BF16, do_sample=False, max_new_tokens=64)</li>
+<li>Dataset: <code>consynthx</code> @ DATASET v1.1.1 (root=cs10k, split=test, n_per_condition=5, 6 glossary conditions; clean dropped per release-v1)</li>
+<li>Task: <code>condition_cls</code> @ prompt <code>v1_definitions</code></li>
+<li>Row count: 30 (5 × {rain, rain_heavy, snow_light, snow_heavy, fog_heavy, night})</li>
+<li>Checksum (sha256): <code>5fe8fea923eb46c97d70aa2d53dc447d8ed759d9409a9eba0b024325ff977868</code></li>
+<li>Effective config: <code>results/smoke_smolvlm_condcls_v1/effective_config.yaml</code></li>
+<li>Run log: <code>jobs/logs/cveval-smolvlm-smoke-47271560.{out,err}</code></li>
+<li>Cluster job: <code>pitzer:47271560</code> (gpu-exp, p0311 / Tesla V100S-32G, elapsed 00:00:51)</li>
+<li>Status: ready</li>
+<li>Telemetry: latency p50=574ms / p95≈1109ms; tokens_out total=219; parse_error_rate=0.033 (1/30); cost_usd=0 (open-source)</li>
+<li>Smoke metrics (NOT for paper — n=5/cond, accuracy chỉ để sanity-check
+  pipeline): overall acc=0.267; per_condition={rain:0.4, rain_heavy:0.0,
+  snow_light:1.0, snow_heavy:0.0, fog_heavy:0.0, night:0.2}.</li>
+<li>Notes: Pipeline E2E xanh — load weight, generate, parse, score, parquet
+  ghi đúng schema canonical. Acc thấp là kỳ vọng cho 256M model + smoke n;
+  AUDIT KHÔNG dùng số này làm baseline.</li>
+</ul>
+<p>Template:</p>
+<pre><code>### run:&lt;run_id&gt;
+- Path: results/&lt;run_id&gt;/predictions.parquet
+- Format: parquet (canonical schema, xem docs/context/01_architecture.md)
+- Model: qwen2.5-vl-7b
+- Dataset: consynthx_kaggle_v6 @ DATASET v1.0.0
+- Task: condition_cls @ prompt v1_definitions
+- Row count:
+- Checksum (sha256):
+- Effective config: results/&lt;run_id&gt;/effective_config.yaml
+- Run log: results/&lt;run_id&gt;/run.log
+- Status: ready
+- Notes:
+</code></pre>
+<h2>Removed/Deprecated</h2>
+<p>(none)</p></div>
+</section>
+    <div class="footer">
+      Generated 2026-05-03T16:33:45.847828+00:00 · 1 runs · 1 models · 1 datasets
+    </div>
+  </main>
+</div>
+</body>
+</html>
