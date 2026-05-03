@@ -146,6 +146,123 @@ function Bar({ value, max = 1, color }) {
   );
 }
 
+function RadarChart({ datasetId, taskId, top = 6, size = 360, models: pickedModels }) {
+  const [hidden, setHidden] = useState(() => new Set());
+  const ds = getDataset(datasetId);
+  if (!ds) return null;
+  const conds = ds.conditions;
+  if (!conds.length) return <div className="t-mute">No conditions to plot.</div>;
+  const matrix = matrixFor(datasetId, taskId);
+  if (!matrix.length) return <div className="t-mute">No data for radar.</div>;
+
+  const summary = summaryFor(datasetId, taskId);
+  const allModelIds = pickedModels && pickedModels.length
+    ? pickedModels
+    : summary.slice(0, top).map(s => s.id);
+
+  // distinct OKLCH hues
+  const colorOf = (i) => {
+    const h = (i * 360 / Math.max(allModelIds.length, 1) + 200) % 360;
+    return `oklch(0.72 0.16 ${h.toFixed(0)})`;
+  };
+
+  const w = size, h = size;
+  const cx = w / 2, cy = h / 2 + 8;
+  const r = Math.min(w, h) * 0.36;
+  const N = conds.length;
+  const angle = (i) => (-Math.PI / 2) + (2 * Math.PI * i / N);
+  const xy = (i, v) => {
+    const rr = r * Math.max(0, Math.min(1, v));
+    return [cx + rr * Math.cos(angle(i)), cy + rr * Math.sin(angle(i))];
+  };
+
+  // grid rings
+  const rings = [0.25, 0.5, 0.75, 1.0];
+  const ringPath = (val) => conds.map((c, i) => {
+    const [x, y] = xy(i, val);
+    return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+  }).join(" ") + " Z";
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}}>
+        {rings.map((v, i) => (
+          <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
+        ))}
+        {conds.map((c, i) => {
+          const [x, y] = xy(i, 1);
+          return <line key={c.key} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--border)" strokeDasharray="2 3" />;
+        })}
+        {/* axis labels */}
+        {conds.map((c, i) => {
+          const [x, y] = xy(i, 1.18);
+          return (
+            <g key={c.key}>
+              <circle cx={(xy(i,1.07))[0]} cy={(xy(i,1.07))[1]} r="3" fill={sevColor(c.severity)} />
+              <text x={x} y={y} fontSize="10" fontFamily="var(--font-mono)" fill="var(--text-2)" textAnchor="middle" dominantBaseline="middle">
+                {c.label}
+              </text>
+            </g>
+          );
+        })}
+        {/* tick labels at 0.5 and 1.0 along axis 0 */}
+        {[0.5, 1.0].map(v => {
+          const [tx, ty] = xy(0, v);
+          return <text key={v} x={tx + 4} y={ty + 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--muted)">{v}</text>;
+        })}
+        {/* polygons */}
+        {allModelIds.map((mid, mi) => {
+          if (hidden.has(mid)) return null;
+          const color = colorOf(mi);
+          const pts = conds.map((c, i) => {
+            const row = matrix.find(r => r.model === mid && r.condition === c.key);
+            return xy(i, row && row.acc != null ? row.acc : 0);
+          });
+          const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
+          return (
+            <g key={mid}>
+              <path d={d} fill={color} fillOpacity="0.10" stroke={color} strokeWidth="1.6" />
+              {pts.map((p, i) => {
+                const row = matrix.find(r => r.model === mid && r.condition === conds[i].key);
+                const v = row && row.acc != null ? row.acc : null;
+                return v != null ? (
+                  <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill={color}>
+                    <title>{`${mid} · ${conds[i].label} = ${(v*100).toFixed(1)}%`}</title>
+                  </circle>
+                ) : null;
+              })}
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:8, justifyContent:"center"}}>
+        {allModelIds.map((mid, mi) => {
+          const isHidden = hidden.has(mid);
+          return (
+            <span key={mid}
+              className="chip mono"
+              style={{
+                cursor:"pointer",
+                fontSize:"var(--fs-xs)",
+                opacity: isHidden ? 0.35 : 1,
+                borderColor: colorOf(mi),
+              }}
+              onClick={() => {
+                const next = new Set(hidden);
+                if (isHidden) next.delete(mid); else next.add(mid);
+                setHidden(next);
+              }}
+            >
+              <span className="chip-dot" style={{background: colorOf(mi)}} />
+              {mid}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function EmptyState({ title, hint }) {
   return (
     <div className="card" style={{ padding: 40, textAlign: "center" }}>
@@ -275,6 +392,6 @@ window.__UI = {
   sevColor, accColor, accBg,
   getDataset, conditionsOf, conditionMeta, matrixFor, modelsInDataset, summaryFor,
   tasksForDataset, metricKindFor,
-  SeverityDot, ConditionTag, StatusChip, Bar, EmptyState,
+  SeverityDot, ConditionTag, StatusChip, Bar, EmptyState, RadarChart,
   Sidebar, Topbar, DatasetSelector, TaskSelector,
 };

@@ -140,11 +140,11 @@ function LeaderboardScreen({ datasetId, taskId }) {
             </div>
             <div className="card">
               <div className="card-head">
-                <div className="card-title">Cost vs accuracy frontier</div>
-                <div className="card-sub">API models only</div>
+                <div className="card-title">Radar — strengths per condition</div>
+                <div className="card-sub">Top {Math.min(6, data.length)} models · click legend to toggle</div>
               </div>
               <div className="card-body">
-                <CostFrontier summary={baseSummary} />
+                <Ulb.RadarChart datasetId={ds.id} taskId={taskId} top={6} size={360} models={data.slice(0,6).map(s => s.id)} />
               </div>
             </div>
           </div>

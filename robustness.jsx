@@ -73,7 +73,7 @@ function RobustnessScreen({ datasetId, taskId }) {
         </div>
       </div>
 
-      <div style={{display:"grid", gridTemplateColumns: selected ? "1fr 360px" : "1fr", gap: 16}}>
+      <div style={{display:"grid", gridTemplateColumns: selected ? "1fr 360px" : "1.4fr 1fr", gap: 16}}>
         <div className="card">
           <div className="card-body">
             <div className="heatmap" style={{
@@ -119,6 +119,20 @@ function RobustnessScreen({ datasetId, taskId }) {
             </div>
           </div>
         </div>
+
+        {!selected && (
+          <div className="card">
+            <div className="card-head">
+              <div>
+                <div className="card-title">Radar — model strengths per condition</div>
+                <div className="card-sub">Click legend pill to toggle. Each axis = condition (severity color).</div>
+              </div>
+            </div>
+            <div className="card-body">
+              <Urm.RadarChart datasetId={ds.id} taskId={taskId} top={6} size={320} />
+            </div>
+          </div>
+        )}
 
         {selected && sel && (
           <div className="card">
