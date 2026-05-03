@@ -3,7 +3,7 @@ const { useState: useStateLB, useMemo: useMemoLB } = React;
 const Dlb = window.__DATA;
 const Ulb = window.__UI;
 
-function LeaderboardScreen({ datasetId, taskId }) {
+function LeaderboardScreen({ datasetId, taskId, scale }) {
   const [sortKey, setSortKey] = useStateLB("macroAcc");
   const [sortDir, setSortDir] = useStateLB("desc");
   const [filter, setFilter]   = useStateLB("");
@@ -11,8 +11,8 @@ function LeaderboardScreen({ datasetId, taskId }) {
   const [metric, setMetric]   = useStateLB("acc");
 
   const ds = Ulb.getDataset(datasetId);
-  const baseSummary = useMemoLB(() => ds ? Ulb.summaryFor(ds.id, taskId) : [], [datasetId, taskId]);
-  const metricKind = ds ? Ulb.metricKindFor(ds.id, taskId) : null;
+  const baseSummary = useMemoLB(() => ds ? Ulb.summaryFor(ds.id, taskId, scale) : [], [datasetId, taskId, scale]);
+  const metricKind = ds ? Ulb.metricKindFor(ds.id, taskId, scale) : null;
 
   const data = useMemoLB(() => {
     let arr = [...baseSummary];
@@ -47,7 +47,7 @@ function LeaderboardScreen({ datasetId, taskId }) {
         <div>
           <h1 className="page-title">Leaderboard</h1>
           <div className="page-sub">
-            {ds.id} · task: {taskId === "all" ? `all (${Ulb.tasksForDataset(ds.id).length})` : taskId}
+            {ds.id} · scale: {scale} · task: {taskId === "all" ? `all (${Ulb.tasksForDataset(ds.id).length})` : taskId}
             {metricKind ? ` · metric: ${metricKind}` : ""} · {ds.conditions.length} conditions · {data.length} models
           </div>
         </div>
@@ -135,7 +135,7 @@ function LeaderboardScreen({ datasetId, taskId }) {
                 <div className="card-sub">Where each model breaks down</div>
               </div>
               <div className="card-body">
-                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} taskId={taskId} />
+                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} taskId={taskId} scale={scale} />
               </div>
             </div>
             <div className="card">
@@ -144,7 +144,7 @@ function LeaderboardScreen({ datasetId, taskId }) {
                 <div className="card-sub">Top {Math.min(6, data.length)} models · click legend to toggle</div>
               </div>
               <div className="card-body">
-                <Ulb.RadarChart datasetId={ds.id} taskId={taskId} top={6} size={360} models={data.slice(0,6).map(s => s.id)} />
+                <Ulb.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} top={6} size={360} models={data.slice(0,6).map(s => s.id)} />
               </div>
             </div>
           </div>
@@ -154,9 +154,9 @@ function LeaderboardScreen({ datasetId, taskId }) {
   );
 }
 
-function PerConditionLines({ summary, datasetId, taskId }) {
+function PerConditionLines({ summary, datasetId, taskId, scale }) {
   const conds = Ulb.conditionsOf(datasetId);
-  const matrix = Ulb.matrixFor(datasetId, taskId);
+  const matrix = Ulb.matrixFor(datasetId, taskId, scale);
   const colors = ["var(--accent)", "var(--sev-1)", "var(--sev-2)", "var(--sev-3)"];
   const w = 560, h = 200, pad = 36;
   if (!conds.length || !summary.length) return <div className="t-mute">No data.</div>;

@@ -3,7 +3,7 @@ const { useState: useStateRn } = React;
 const Drn = window.__DATA;
 const Urn = window.__UI;
 
-function RunsScreen({ datasetId }) {
+function RunsScreen({ datasetId, taskId, scale }) {
   const [filter, setFilter] = useStateRn("");
   const [statusF, setStatusF] = useStateRn("all");
   const [datasetF, setDatasetF] = useStateRn("all");
@@ -11,6 +11,8 @@ function RunsScreen({ datasetId }) {
   const filtered = Drn.runs.filter(r => {
     if (statusF !== "all" && r.status !== statusF) return false;
     if (datasetF !== "all" && r.dataset !== datasetF) return false;
+    if (taskId !== "all" && taskId != null && r.task !== taskId) return false;
+    if (scale !== "all" && scale != null && r.scale !== scale) return false;
     if (filter && !(r.id + r.model).toLowerCase().includes(filter.toLowerCase())) return false;
     return true;
   });
@@ -53,6 +55,7 @@ function RunsScreen({ datasetId }) {
                 <th>Dataset</th>
                 <th>Task</th>
                 <th>Prompt</th>
+                <th>Scale</th>
                 <th>Status</th>
                 <th className="num">N</th>
                 <th className="num">Metric</th>
@@ -67,6 +70,7 @@ function RunsScreen({ datasetId }) {
                   <td className="mono t-text2">{r.dataset}</td>
                   <td className="t-text2">{r.task}</td>
                   <td className="mono t-mute">{r.prompt}</td>
+                  <td><span className="tag mono" style={{color: r.scale === "smoke" ? "var(--warn)" : "var(--good)"}}>{r.scale}</span></td>
                   <td><Urn.StatusChip status={r.status} /></td>
                   <td className="num mono">{r.n.toLocaleString()}</td>
                   <td className="num mono" title={r.aggregate_label ? `${r.aggregate_label} from ${r.aggregate_source}` : "no metrics.json"}>

@@ -3,14 +3,15 @@ const { useState: useStateS, useMemo: useMemoS } = React;
 const Dsm = window.__DATA;
 const Usm = window.__UI;
 
-function SamplesScreen({ datasetId, taskId }) {
+function SamplesScreen({ datasetId, taskId, scale }) {
   const ds = Usm.getDataset(datasetId);
   const samples = useMemoS(() =>
     Dsm.samples.filter(s =>
       (!ds || s.dataset === ds.id) &&
-      (taskId == null || taskId === "all" || s.task === taskId)
+      (taskId == null || taskId === "all" || s.task === taskId) &&
+      (scale == null || scale === "all" || s.scale === scale)
     ),
-    [datasetId, taskId]
+    [datasetId, taskId, scale]
   );
   const models = useMemoS(() => [...new Set(samples.map(s => s.model))], [samples]);
   const [model, setModel] = useStateS(models[0] || null);

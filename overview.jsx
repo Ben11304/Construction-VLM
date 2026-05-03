@@ -3,12 +3,12 @@ const { useMemo: useMemoOv } = React;
 const Dov = window.__DATA;
 const Uov = window.__UI;
 
-function OverviewScreen({ datasetId, taskId, goto }) {
+function OverviewScreen({ datasetId, taskId, scale, goto }) {
   const ds = Uov.getDataset(datasetId);
-  const summary = useMemoOv(() => ds ? Uov.summaryFor(ds.id, taskId) : [], [datasetId, taskId]);
+  const summary = useMemoOv(() => ds ? Uov.summaryFor(ds.id, taskId, scale) : [], [datasetId, taskId, scale]);
   const conds = ds ? ds.conditions : [];
-  const matrix = ds ? Uov.matrixFor(ds.id, taskId) : [];
-  const metricKind = ds ? Uov.metricKindFor(ds.id, taskId) : null;
+  const matrix = ds ? Uov.matrixFor(ds.id, taskId, scale) : [];
+  const metricKind = ds ? Uov.metricKindFor(ds.id, taskId, scale) : null;
   const top = summary[0];
   const mostRobust = [...summary].filter(s => s.robustness != null).sort((a,b)=>b.robustness-a.robustness)[0];
   const samplesEvaluated = Dov.runs.filter(r => r.status === "done").reduce((s,r) => s+r.n, 0);
@@ -37,7 +37,7 @@ function OverviewScreen({ datasetId, taskId, goto }) {
         <div>
           <h1 className="page-title">Overview</h1>
           <div className="page-sub">
-            cveval · {ds.id} · task: {taskId === "all" ? `all (${Uov.tasksForDataset(ds.id).length})` : taskId}
+            cveval · {ds.id} · scale: {scale} · task: {taskId === "all" ? `all (${Uov.tasksForDataset(ds.id).length})` : taskId}
             {metricKind ? ` · metric: ${metricKind}` : ""}
             {ds.description ? ` · ${ds.description}` : ""}
           </div>

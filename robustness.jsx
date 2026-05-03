@@ -3,14 +3,14 @@ const { useState: useStateRM, useMemo: useMemoRM } = React;
 const Drm = window.__DATA;
 const Urm = window.__UI;
 
-function RobustnessScreen({ datasetId, taskId }) {
+function RobustnessScreen({ datasetId, taskId, scale }) {
   const [metric, setMetric] = useStateRM("acc");
   const [selected, setSelected] = useStateRM(null);
   const ds = Urm.getDataset(datasetId);
   const conds = ds ? ds.conditions : [];
-  const matrix = ds ? Urm.matrixFor(ds.id, taskId) : [];
-  const models = ds ? Urm.modelsInDataset(ds.id, taskId) : [];
-  const metricKind = ds ? Urm.metricKindFor(ds.id, taskId) : null;
+  const matrix = ds ? Urm.matrixFor(ds.id, taskId, scale) : [];
+  const models = ds ? Urm.modelsInDataset(ds.id, taskId, scale) : [];
+  const metricKind = ds ? Urm.metricKindFor(ds.id, taskId, scale) : null;
 
   if (!ds) return <div className="page"><Urm.EmptyState title="No dataset selected" /></div>;
   if (!matrix.length) return (
@@ -60,7 +60,7 @@ function RobustnessScreen({ datasetId, taskId }) {
         <div>
           <h1 className="page-title">Robustness matrix</h1>
           <div className="page-sub">
-            {ds.id} · task: {taskId === "all" ? `all (${Urm.tasksForDataset(ds.id).length})` : taskId}
+            {ds.id} · scale: {scale} · task: {taskId === "all" ? `all (${Urm.tasksForDataset(ds.id).length})` : taskId}
             {metricKind ? ` · metric: ${metricKind}` : ""} · model × condition · click any cell to drill in
           </div>
         </div>
@@ -129,7 +129,7 @@ function RobustnessScreen({ datasetId, taskId }) {
               </div>
             </div>
             <div className="card-body">
-              <Urm.RadarChart datasetId={ds.id} taskId={taskId} top={6} size={320} />
+              <Urm.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} top={6} size={320} />
             </div>
           </div>
         )}

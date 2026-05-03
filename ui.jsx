@@ -37,27 +37,34 @@ function conditionsOf(datasetId) {
 function conditionMeta(datasetId, condKey) {
   return conditionsOf(datasetId).find(c => c.key === condKey) || { key: condKey, label: condKey, severity: 0, group: condKey };
 }
-function matrixFor(datasetId, taskId) {
+function matrixFor(datasetId, taskId, scale) {
   return D.matrix.filter(r =>
-    r.dataset === datasetId && (taskId == null || taskId === "all" || r.task === taskId)
+    r.dataset === datasetId
+    && (taskId == null || taskId === "all" || r.task === taskId)
+    && (scale == null || scale === "all" || r.scale === scale)
+  );
+}
+function runsFiltered(datasetId, taskId, scale) {
+  return D.runs.filter(r =>
+    (datasetId == null || r.dataset === datasetId)
+    && (taskId == null || taskId === "all" || r.task === taskId)
+    && (scale == null || scale === "all" || r.scale === scale)
   );
 }
 function tasksForDataset(datasetId) {
   const ids = new Set(D.matrix.filter(r => r.dataset === datasetId).map(r => r.task));
   return [...ids].filter(Boolean).sort();
 }
-function metricKindFor(datasetId, taskId) {
-  const r = D.matrix.find(x =>
-    x.dataset === datasetId && (taskId == null || taskId === "all" || x.task === taskId) && x.metric_kind
-  );
+function metricKindFor(datasetId, taskId, scale) {
+  const r = matrixFor(datasetId, taskId, scale).find(x => x.metric_kind);
   return r ? r.metric_kind : null;
 }
-function modelsInDataset(datasetId, taskId) {
-  const ids = new Set(matrixFor(datasetId, taskId).map(r => r.model));
+function modelsInDataset(datasetId, taskId, scale) {
+  const ids = new Set(matrixFor(datasetId, taskId, scale).map(r => r.model));
   return D.models.filter(m => ids.has(m.id));
 }
-function summaryFor(datasetId, taskId) {
-  const rows = matrixFor(datasetId, taskId);
+function summaryFor(datasetId, taskId, scale) {
+  const rows = matrixFor(datasetId, taskId, scale);
   const byModel = {};
   for (const r of rows) {
     if (!byModel[r.model]) byModel[r.model] = [];
@@ -66,9 +73,7 @@ function summaryFor(datasetId, taskId) {
   // Run-level aggregates by (model, dataset, task) — corpus-level when present
   // (BLEU/mIoU are NOT row-averages and must come from metrics.json).
   const runsByMT = {};
-  for (const r of D.runs) {
-    if (r.dataset !== datasetId) continue;
-    if (taskId != null && taskId !== "all" && r.task !== taskId) continue;
+  for (const r of runsFiltered(datasetId, taskId, scale)) {
     if (!runsByMT[r.model]) runsByMT[r.model] = [];
     runsByMT[r.model].push(r);
   }
@@ -146,16 +151,16 @@ function Bar({ value, max = 1, color }) {
   );
 }
 
-function RadarChart({ datasetId, taskId, top = 6, size = 360, models: pickedModels }) {
+function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
   const ds = getDataset(datasetId);
   if (!ds) return null;
   const conds = ds.conditions;
   if (!conds.length) return <div className="t-mute">No conditions to plot.</div>;
-  const matrix = matrixFor(datasetId, taskId);
+  const matrix = matrixFor(datasetId, taskId, scale);
   if (!matrix.length) return <div className="t-mute">No data for radar.</div>;
 
-  const summary = summaryFor(datasetId, taskId);
+  const summary = summaryFor(datasetId, taskId, scale);
   const allModelIds = pickedModels && pickedModels.length
     ? pickedModels
     : summary.slice(0, top).map(s => s.id);
@@ -334,6 +339,30 @@ function Sidebar({ route, setRoute }) {
   );
 }
 
+function ScaleSelector({ value, onChange, datasetId, taskId }) {
+  // Count runs per scale to decide whether to show.
+  const all = runsFiltered(datasetId, taskId, "all");
+  const fullN = all.filter(r => r.scale === "full").length;
+  const smokeN = all.filter(r => r.scale === "smoke").length;
+  if (fullN === 0 && smokeN === 0) return null;
+  if (fullN === 0 || smokeN === 0) {
+    // Only one scale present — show a label, not a control.
+    const only = fullN > 0 ? "full" : "smoke";
+    const n = fullN > 0 ? fullN : smokeN;
+    return <span className="chip mono" title={`only ${only} runs available`}>
+      <span className="chip-dot" style={{background:"var(--muted)"}} />
+      {only} ({n})
+    </span>;
+  }
+  return (
+    <div className="segmented">
+      <button className={value==="full"?"active":""}  onClick={()=>onChange("full")}>full ({fullN})</button>
+      <button className={value==="smoke"?"active":""} onClick={()=>onChange("smoke")}>smoke ({smokeN})</button>
+      <button className={value==="all"?"active":""}   onClick={()=>onChange("all")}>all ({fullN+smokeN})</button>
+    </div>
+  );
+}
+
 function TaskSelector({ value, onChange, datasetId }) {
   const tasks = tasksForDataset(datasetId);
   if (tasks.length <= 1) return null;
@@ -364,7 +393,7 @@ function DatasetSelector({ value, onChange }) {
   );
 }
 
-function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, onNewRun }) {
+function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, scale, setScale, onNewRun }) {
   const labels = {
     overview: "Overview", leaderboard: "Leaderboard", robustness: "Robustness matrix",
     runs: "Runs", samples: "Sample inspector",
@@ -380,6 +409,7 @@ function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, onNewRun })
       <div className="topbar-actions">
         <DatasetSelector value={datasetId} onChange={setDatasetId} />
         <TaskSelector value={taskId} onChange={setTaskId} datasetId={datasetId} />
+        <ScaleSelector value={scale} onChange={setScale} datasetId={datasetId} taskId={taskId} />
         {D.repo_url && <a className="btn btn-ghost btn-sm" href={D.repo_url} target="_blank" rel="noreferrer">repo ↗</a>}
         <span className="mono t-mute" style={{fontSize:"var(--fs-xs)"}}>built {D.generated_at.slice(0,16).replace("T"," ")}</span>
       </div>
@@ -391,7 +421,7 @@ window.__UI = {
   fmtPct, fmtPct0, fmtMs, fmtUsd, fmtDelta,
   sevColor, accColor, accBg,
   getDataset, conditionsOf, conditionMeta, matrixFor, modelsInDataset, summaryFor,
-  tasksForDataset, metricKindFor,
+  tasksForDataset, metricKindFor, runsFiltered,
   SeverityDot, ConditionTag, StatusChip, Bar, EmptyState, RadarChart,
-  Sidebar, Topbar, DatasetSelector, TaskSelector,
+  Sidebar, Topbar, DatasetSelector, TaskSelector, ScaleSelector,
 };
