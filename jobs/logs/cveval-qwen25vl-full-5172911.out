@@ -1,3 +1,0 @@
-[cveval] cluster=ascend host=a0116.ten.osc.edu
-NVIDIA A100-PCIE-40GB, 40960 MiB
-[cveval] torch=2.8.0+cu128 cuda_avail=True dev=NVIDIA A100-PCIE-40GB

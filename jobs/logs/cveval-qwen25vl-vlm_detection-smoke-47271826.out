@@ -1,8 +1,0 @@
-[cveval] task=vlm_detection host=p0332.ten.osc.edu
-Tesla V100S-PCIE-32GB, 32768 MiB
-Wrote: results/smoke_qwen25vl_vlm_detection_v1/predictions.parquet
-[cveval] run_id=smoke_qwen25vl_vlm_detection_v1
-total 40K
--rw-r--r-- 1 binben14 PGS0407 670 May  3 13:05 effective_config.yaml
--rw-r--r-- 1 binben14 PGS0407 25K May  3 13:09 predictions.parquet
--rw-r--r-- 1 binben14 PGS0407  65 May  3 13:09 summary.json

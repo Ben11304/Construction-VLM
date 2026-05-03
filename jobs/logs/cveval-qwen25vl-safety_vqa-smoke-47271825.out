@@ -1,8 +1,0 @@
-[cveval] task=safety_vqa host=p0340.ten.osc.edu
-Tesla V100S-PCIE-32GB, 32768 MiB
-Wrote: results/smoke_qwen25vl_safety_vqa_v1/predictions.parquet
-[cveval] run_id=smoke_qwen25vl_safety_vqa_v1
-total 36K
--rw-r--r-- 1 binben14 PGS0407 658 May  3 13:05 effective_config.yaml
--rw-r--r-- 1 binben14 PGS0407 26K May  3 13:09 predictions.parquet
--rw-r--r-- 1 binben14 PGS0407  62 May  3 13:09 summary.json
