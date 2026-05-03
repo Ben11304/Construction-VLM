@@ -37,16 +37,28 @@ function conditionsOf(datasetId) {
 function conditionMeta(datasetId, condKey) {
   return conditionsOf(datasetId).find(c => c.key === condKey) || { key: condKey, label: condKey, severity: 0, group: condKey };
 }
-function matrixFor(datasetId) {
-  return D.matrix.filter(r => r.dataset === datasetId);
+function matrixFor(datasetId, taskId) {
+  return D.matrix.filter(r =>
+    r.dataset === datasetId && (taskId == null || taskId === "all" || r.task === taskId)
+  );
 }
-function modelsInDataset(datasetId) {
-  const ids = new Set(matrixFor(datasetId).map(r => r.model));
+function tasksForDataset(datasetId) {
+  const ids = new Set(D.matrix.filter(r => r.dataset === datasetId).map(r => r.task));
+  return [...ids].filter(Boolean).sort();
+}
+function metricKindFor(datasetId, taskId) {
+  const r = D.matrix.find(x =>
+    x.dataset === datasetId && (taskId == null || taskId === "all" || x.task === taskId) && x.metric_kind
+  );
+  return r ? r.metric_kind : null;
+}
+function modelsInDataset(datasetId, taskId) {
+  const ids = new Set(matrixFor(datasetId, taskId).map(r => r.model));
   return D.models.filter(m => ids.has(m.id));
 }
-function summaryFor(datasetId) {
+function summaryFor(datasetId, taskId) {
   const conds = conditionsOf(datasetId);
-  const rows = matrixFor(datasetId);
+  const rows = matrixFor(datasetId, taskId);
   const byModel = {};
   for (const r of rows) {
     if (!byModel[r.model]) byModel[r.model] = [];
@@ -180,6 +192,17 @@ function Sidebar({ route, setRoute }) {
   );
 }
 
+function TaskSelector({ value, onChange, datasetId }) {
+  const tasks = tasksForDataset(datasetId);
+  if (tasks.length <= 1) return null;
+  return (
+    <select className="select" value={value || "all"} onChange={e => onChange(e.target.value)}>
+      <option value="all">all tasks ({tasks.length})</option>
+      {tasks.map(t => <option key={t} value={t}>{t}</option>)}
+    </select>
+  );
+}
+
 function DatasetSelector({ value, onChange }) {
   if (!D.datasets.length) return null;
   if (D.datasets.length === 1) {
@@ -199,7 +222,7 @@ function DatasetSelector({ value, onChange }) {
   );
 }
 
-function Topbar({ route, datasetId, setDatasetId, onNewRun }) {
+function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, onNewRun }) {
   const labels = {
     overview: "Overview", leaderboard: "Leaderboard", robustness: "Robustness matrix",
     runs: "Runs", samples: "Sample inspector",
@@ -214,6 +237,7 @@ function Topbar({ route, datasetId, setDatasetId, onNewRun }) {
       </div>
       <div className="topbar-actions">
         <DatasetSelector value={datasetId} onChange={setDatasetId} />
+        <TaskSelector value={taskId} onChange={setTaskId} datasetId={datasetId} />
         {D.repo_url && <a className="btn btn-ghost btn-sm" href={D.repo_url} target="_blank" rel="noreferrer">repo ↗</a>}
         <span className="mono t-mute" style={{fontSize:"var(--fs-xs)"}}>built {D.generated_at.slice(0,16).replace("T"," ")}</span>
       </div>
@@ -225,6 +249,7 @@ window.__UI = {
   fmtPct, fmtPct0, fmtMs, fmtUsd, fmtDelta,
   sevColor, accColor, accBg,
   getDataset, conditionsOf, conditionMeta, matrixFor, modelsInDataset, summaryFor,
+  tasksForDataset, metricKindFor,
   SeverityDot, ConditionTag, StatusChip, Bar, EmptyState,
-  Sidebar, Topbar, DatasetSelector,
+  Sidebar, Topbar, DatasetSelector, TaskSelector,
 };

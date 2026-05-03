@@ -3,7 +3,7 @@ const { useState: useStateLB, useMemo: useMemoLB } = React;
 const Dlb = window.__DATA;
 const Ulb = window.__UI;
 
-function LeaderboardScreen({ datasetId }) {
+function LeaderboardScreen({ datasetId, taskId }) {
   const [sortKey, setSortKey] = useStateLB("macroAcc");
   const [sortDir, setSortDir] = useStateLB("desc");
   const [filter, setFilter]   = useStateLB("");
@@ -11,7 +11,8 @@ function LeaderboardScreen({ datasetId }) {
   const [metric, setMetric]   = useStateLB("acc");
 
   const ds = Ulb.getDataset(datasetId);
-  const baseSummary = useMemoLB(() => ds ? Ulb.summaryFor(ds.id) : [], [datasetId]);
+  const baseSummary = useMemoLB(() => ds ? Ulb.summaryFor(ds.id, taskId) : [], [datasetId, taskId]);
+  const metricKind = ds ? Ulb.metricKindFor(ds.id, taskId) : null;
 
   const data = useMemoLB(() => {
     let arr = [...baseSummary];
@@ -45,7 +46,10 @@ function LeaderboardScreen({ datasetId }) {
       <div className="page-head">
         <div>
           <h1 className="page-title">Leaderboard</h1>
-          <div className="page-sub">{ds.id} · {ds.conditions.length} conditions · {data.length} models</div>
+          <div className="page-sub">
+            {ds.id} · task: {taskId === "all" ? `all (${Ulb.tasksForDataset(ds.id).length})` : taskId}
+            {metricKind ? ` · metric: ${metricKind}` : ""} · {ds.conditions.length} conditions · {data.length} models
+          </div>
         </div>
         <div className="row-h">
           <div className="segmented">
@@ -126,7 +130,7 @@ function LeaderboardScreen({ datasetId }) {
                 <div className="card-sub">Where each model breaks down</div>
               </div>
               <div className="card-body">
-                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} />
+                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} taskId={taskId} />
               </div>
             </div>
             <div className="card">
@@ -145,9 +149,9 @@ function LeaderboardScreen({ datasetId }) {
   );
 }
 
-function PerConditionLines({ summary, datasetId }) {
+function PerConditionLines({ summary, datasetId, taskId }) {
   const conds = Ulb.conditionsOf(datasetId);
-  const matrix = Ulb.matrixFor(datasetId);
+  const matrix = Ulb.matrixFor(datasetId, taskId);
   const colors = ["var(--accent)", "var(--sev-1)", "var(--sev-2)", "var(--sev-3)"];
   const w = 560, h = 200, pad = 36;
   if (!conds.length || !summary.length) return <div className="t-mute">No data.</div>;
