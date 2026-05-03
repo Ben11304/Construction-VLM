@@ -1,3 +1,0 @@
-[cveval] host=p0311.ten.osc.edu gpu=Tesla V100S-PCIE-32GB
-[cveval] python=Python 3.10.19
-[cveval] torch=2.8.0+cu126 cuda_avail=True

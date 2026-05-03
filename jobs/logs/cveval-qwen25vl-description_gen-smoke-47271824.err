@@ -1,0 +1,57 @@
+The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:01,  3.15it/s]Loading checkpoint shards:  60%|██████    | 3/5 [00:00<00:00,  6.93it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:00<00:00,  8.73it/s]
+The following generation flags are not valid and may be ignored: ['temperature']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+2026-05-03 13:08:10,476 [ERROR] cveval.runner.local_runner: generate() failed for image_id=fog_heavy/0000702
+Traceback (most recent call last):
+  File "/users/PGS0407/binben14/VietHuy/ConstructionVLM-Eval/cveval/runner/local_runner.py", line 105, in run
+    result = model.generate(
+  File "/users/PGS0407/binben14/VietHuy/ConstructionVLM-Eval/cveval/models/qwen2_5_vl.py", line 87, in generate
+    out_ids = self._model.generate(**inputs, **gen_kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/generation/utils.py", line 2564, in generate
+    result = decoding_method(
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/generation/utils.py", line 2784, in _sample
+    outputs = self(**model_inputs, return_dict=True)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/utils/generic.py", line 918, in wrapper
+    output = func(self, *args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1476, in forward
+    outputs = self.model(
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1257, in forward
+    image_embeds = self.get_image_features(pixel_values, image_grid_thw)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 1170, in get_image_features
+    image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 453, in forward
+    hidden_states = blk(
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 281, in forward
+    hidden_states = hidden_states + self.attn(
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 244, in forward
+    attn_outputs = [
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py", line 245, in <listcomp>
+    attention_interface(
+  File "/apps/pytorch/2.8.0/lib/python3.10/site-packages/transformers/integrations/sdpa_attention.py", line 96, in sdpa_attention_forward
+    attn_output = torch.nn.functional.scaled_dot_product_attention(
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.73 GiB. GPU 0 has a total capacity of 31.73 GiB of which 1.57 GiB is free. Including non-PyTorch memory, this process has 30.16 GiB memory in use. Of the allocated memory 29.75 GiB is allocated by PyTorch, and 36.93 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-05-03 13:08:46,890 [INFO] cveval.runner.local_runner: Wrote 35 rows to results/smoke_qwen25vl_description_gen_v1/predictions.parquet

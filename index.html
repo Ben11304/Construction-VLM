@@ -1,87 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Overview — Admin</title>
-<link rel="stylesheet" href="assets/style.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ConstructionVLM-Eval — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 </head>
 <body>
-<div class="layout">
-  <nav class="sidebar">
-    <h1>cveval admin
-      <small>v0.1.0</small>
-    </h1>
-      <a href="index.html" class="active">Overview</a>
-      <a href="datasets.html" >Datasets</a>
-      <a href="models.html" >Models</a>
-      <a href="tasks.html" >Tasks</a>
-      <a href="metrics.html" >Metrics</a>
-      <a href="runs.html" >Runs</a>
-      <a href="manifests.html" >Manifests</a>
-  </nav>
-  <main class="main">
-<h2>Overview</h2>
-<div class="cards">
-  <div class="card"><div class="label">Datasets</div><div class="value">1</div></div>
-  <div class="card"><div class="label">Models</div><div class="value">1</div></div>
-  <div class="card"><div class="label">Tasks</div><div class="value">1</div></div>
-  <div class="card"><div class="label">Metrics</div><div class="value">0</div></div>
-  <div class="card"><div class="label">Runs</div><div class="value">1</div></div>
-  <div class="card"><div class="label">Manifests</div><div class="value">4</div></div>
-</div>
+<div id="root"></div>
 
-<h3>Recent runs</h3>
-<table>
-  <thead><tr><th>run_id</th><th>model</th><th>dataset</th><th>task</th><th class="num">n</th><th class="num">accuracy</th><th class="num">latency p50</th><th>started</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><a href="runs/smoke_smolvlm_condcls_v1.html">smoke_smolvlm_condcls_v1</a></td>
-      <td>smolvlm-256m</td>
-      <td>consynthx</td>
-      <td>condition_cls</td>
-      <td class="num">30</td>
-      <td class="num">26.67%</td>
-      <td class="num">574 ms</td>
-      <td class="meta">2026-05-03T15:43:11</td>
-    </tr>
-  </tbody>
-</table>
+<script>window.__TWEAK_DEFAULTS = {"theme":"dark","density":"cozy","accent":"cyan","showCost":true};</script>
 
-<h3>Manifests</h3>
-<table>
-  <thead><tr><th>agent</th><th>version</th><th class="num">artifacts</th><th>last updated</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><a href="manifests.html#AUDIT">AUDIT</a></td>
-      <td><span class="badge good">0.1.0</span></td>
-      <td class="num">1</td>
-      <td class="meta">2026-05-03 by AUDIT — first audit pass</td>
-    </tr>
-    <tr>
-      <td><a href="manifests.html#DATASET">DATASET</a></td>
-      <td><span class="badge good">1.2.1</span></td>
-      <td class="num">5</td>
-      <td class="meta">2026-05-03 by DATASET — fix `__init__(cfg)` contract</td>
-    </tr>
-    <tr>
-      <td><a href="manifests.html#FRAMEWORK">FRAMEWORK</a></td>
-      <td><span class="badge good">0.2.0</span></td>
-      <td class="num">11</td>
-      <td class="meta">2026-05-03 by FRAMEWORK skeleton scaffold</td>
-    </tr>
-    <tr>
-      <td><a href="manifests.html#VLM">VLM</a></td>
-      <td><span class="badge good">0.1.0</span></td>
-      <td class="num">2</td>
-      <td class="meta">2026-05-03 by VLM — first successful run (smoke_smolvlm_condcls_v1)</td>
-    </tr>
-  </tbody>
-</table>
-    <div class="footer">
-      Generated 2026-05-03T16:33:45.847828+00:00 · 1 runs · 1 models · 1 datasets
-    </div>
-  </main>
-</div>
+<script src="data.js"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="overview.jsx"></script>
+<script type="text/babel" src="leaderboard.jsx"></script>
+<script type="text/babel" src="robustness.jsx"></script>
+<script type="text/babel" src="runs.jsx"></script>
+<script type="text/babel" src="samples.jsx"></script>
+<script type="text/babel" src="stubs.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
 </body>
 </html>

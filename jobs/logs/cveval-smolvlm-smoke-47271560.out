@@ -1,9 +1,0 @@
-[cveval] host=p0311.ten.osc.edu gpu=Tesla V100S-PCIE-32GB
-[cveval] python=Python 3.10.19
-[cveval] torch=2.8.0+cu126 cuda_avail=True
-Wrote: results/smoke_smolvlm_condcls_v1/predictions.parquet
-[cveval] run_id=smoke_smolvlm_condcls_v1
-total 16K
--rw-r--r-- 1 binben14 PGS0407 649 May  3 11:42 effective_config.yaml
--rw-r--r-- 1 binben14 PGS0407 12K May  3 11:43 predictions.parquet
--rw-r--r-- 1 binben14 PGS0407  58 May  3 11:43 summary.json
