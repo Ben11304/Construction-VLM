@@ -158,17 +158,35 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
   const conds = Ulb.conditionsOf(datasetId);
   const matrix = Ulb.matrixFor(datasetId, taskId, scale);
   const colors = ["var(--accent)", "var(--sev-1)", "var(--sev-2)", "var(--sev-3)"];
-  const w = 560, h = 200, pad = 36;
+  const w = 560, h = 200, pad = 40;
   if (!conds.length || !summary.length) return <div className="t-mute">No data.</div>;
+
+  let dataMax = 0;
+  for (const m of summary) for (const c of conds) {
+    const row = matrix.find(r => r.model === m.id && r.condition === c.key);
+    if (row && row.acc != null && row.acc > dataMax) dataMax = row.acc;
+  }
+  const niceCeil = (v) => {
+    const cs = [0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 1.0];
+    for (const c of cs) if (v <= c) return c;
+    return 1;
+  };
+  const yMax = Math.max(niceCeil(dataMax * 1.1), 0.005);
+  const fmt = (v) => yMax >= 0.5 ? `${(v*100).toFixed(0)}%`
+                  : yMax >= 0.05 ? `${(v*100).toFixed(1)}%`
+                  : v.toFixed(3);
+
   const X = i => pad + (i / Math.max(1, conds.length - 1)) * (w - 2*pad);
-  const Y = v => h - pad - v * (h - 2*pad);
+  const Y = v => h - pad - (v / yMax) * (h - 2*pad);
+  const ticks = [0, yMax/2, yMax];
+
   return (
     <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:220}}>
-      {[0.25, 0.5, 0.75, 1].map(t => (
+      {ticks.map(t => (
         <line key={t} x1={pad} y1={Y(t)} x2={w-pad} y2={Y(t)} stroke="var(--border)" strokeDasharray="2 3" />
       ))}
-      {[0, 0.5, 1].map(t => (
-        <text key={t} x={pad-6} y={Y(t)+3} fontSize="9" fill="var(--muted)" textAnchor="end" fontFamily="var(--font-mono)">{t}</text>
+      {ticks.map(t => (
+        <text key={t} x={pad-6} y={Y(t)+3} fontSize="9" fill="var(--muted)" textAnchor="end" fontFamily="var(--font-mono)">{fmt(t)}</text>
       ))}
       {conds.map((c,i) => (
         <text key={c.key} x={X(i)} y={h-pad+14} fontSize="9" fill="var(--muted)" textAnchor="middle" fontFamily="var(--font-mono)">{c.key.slice(0,6)}</text>
@@ -176,7 +194,7 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
       {summary.map((m, mi) => {
         const pts = conds.map((c,i) => {
           const row = matrix.find(r => r.model === m.id && r.condition === c.key);
-          return row ? [X(i), Y(row.acc)] : null;
+          return row && row.acc != null ? [X(i), Y(row.acc)] : null;
         }).filter(Boolean);
         if (pts.length < 2) return null;
         const d = pts.map((p,i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");

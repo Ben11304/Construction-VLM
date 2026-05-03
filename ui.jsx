@@ -153,6 +153,7 @@ function Bar({ value, max = 1, color }) {
 
 function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
+  const [autoScale, setAutoScale] = useState(true);
   const ds = getDataset(datasetId);
   if (!ds) return null;
   const conds = ds.conditions;
@@ -165,7 +166,25 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
     ? pickedModels
     : summary.slice(0, top).map(s => s.id);
 
-  // distinct OKLCH hues
+  // Compute max across visible polygons. Cap at 1.0; tiny ceiling guard.
+  const visible = allModelIds.filter(mid => !hidden.has(mid));
+  let dataMax = 0;
+  for (const mid of visible) {
+    for (const c of conds) {
+      const row = matrix.find(r => r.model === mid && r.condition === c.key);
+      if (row && row.acc != null && row.acc > dataMax) dataMax = row.acc;
+    }
+  }
+  // Round up to a "nice" upper bound for cleaner ticks.
+  const niceCeil = (v) => {
+    if (v <= 0) return 1;
+    if (v >= 1) return 1;
+    const candidates = [0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 1.0];
+    for (const c of candidates) if (v <= c) return c;
+    return 1;
+  };
+  const axisMax = autoScale ? Math.max(niceCeil(dataMax * 1.05), 0.005) : 1.0;
+
   const colorOf = (i) => {
     const h = (i * 360 / Math.max(allModelIds.length, 1) + 200) % 360;
     return `oklch(0.72 0.16 ${h.toFixed(0)})`;
@@ -176,20 +195,37 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
   const r = Math.min(w, h) * 0.36;
   const N = conds.length;
   const angle = (i) => (-Math.PI / 2) + (2 * Math.PI * i / N);
+  const norm = (v) => v == null ? null : Math.max(0, Math.min(1, v / axisMax));
   const xy = (i, v) => {
     const rr = r * Math.max(0, Math.min(1, v));
     return [cx + rr * Math.cos(angle(i)), cy + rr * Math.sin(angle(i))];
   };
 
-  // grid rings
   const rings = [0.25, 0.5, 0.75, 1.0];
   const ringPath = (val) => conds.map((c, i) => {
     const [x, y] = xy(i, val);
     return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
   }).join(" ") + " Z";
 
+  const fmtTick = (v) => {
+    const real = v * axisMax;
+    if (axisMax >= 0.5) return `${(real*100).toFixed(0)}%`;
+    if (axisMax >= 0.05) return `${(real*100).toFixed(1)}%`;
+    return real.toFixed(3);
+  };
+
   return (
     <div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+        <span className="t-mute mono" style={{fontSize:"var(--fs-xs)"}}>
+          axis max: {fmtTick(1)} {autoScale ? "(auto)" : "(fixed)"}
+        </span>
+        <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
+              onClick={()=>setAutoScale(!autoScale)}>
+          <span className="chip-dot" style={{background: autoScale ? "var(--accent)" : "var(--muted)"}} />
+          {autoScale ? "auto-scale" : "0–100%"}
+        </span>
+      </div>
       <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}}>
         {rings.map((v, i) => (
           <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
@@ -198,7 +234,6 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
           const [x, y] = xy(i, 1);
           return <line key={c.key} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--border)" strokeDasharray="2 3" />;
         })}
-        {/* axis labels */}
         {conds.map((c, i) => {
           const [x, y] = xy(i, 1.18);
           return (
@@ -210,18 +245,17 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
             </g>
           );
         })}
-        {/* tick labels at 0.5 and 1.0 along axis 0 */}
         {[0.5, 1.0].map(v => {
           const [tx, ty] = xy(0, v);
-          return <text key={v} x={tx + 4} y={ty + 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--muted)">{v}</text>;
+          return <text key={v} x={tx + 4} y={ty + 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--muted)">{fmtTick(v)}</text>;
         })}
-        {/* polygons */}
         {allModelIds.map((mid, mi) => {
           if (hidden.has(mid)) return null;
           const color = colorOf(mi);
           const pts = conds.map((c, i) => {
             const row = matrix.find(r => r.model === mid && r.condition === c.key);
-            return xy(i, row && row.acc != null ? row.acc : 0);
+            const nv = norm(row && row.acc);
+            return xy(i, nv != null ? nv : 0);
           });
           const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
           return (
@@ -232,7 +266,7 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
                 const v = row && row.acc != null ? row.acc : null;
                 return v != null ? (
                   <circle key={i} cx={p[0]} cy={p[1]} r="2.5" fill={color}>
-                    <title>{`${mid} · ${conds[i].label} = ${(v*100).toFixed(1)}%`}</title>
+                    <title>{`${mid} · ${conds[i].label} = ${axisMax >= 0.05 ? (v*100).toFixed(2)+'%' : v.toFixed(4)}`}</title>
                   </circle>
                 ) : null;
               })}

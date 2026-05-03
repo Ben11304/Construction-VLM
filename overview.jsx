@@ -218,13 +218,21 @@ function ScatterPlot({ data }) {
 
 function ConditionDifficulty({ conds, matrix }) {
   const rows = conds.map(c => {
-    const accs = matrix.filter(r => r.condition === c.key).map(r => r.acc);
+    const accs = matrix.filter(r => r.condition === c.key && r.acc != null).map(r => r.acc);
     const avg = accs.length ? accs.reduce((s,v)=>s+v,0)/accs.length : null;
     return { ...c, avg };
   });
-  const max = Math.max(...rows.map(r => r.avg || 0), 0.01);
+  const dataMax = Math.max(...rows.map(r => r.avg || 0), 0.001);
+  const fmt = (v) =>
+    v == null ? "—" :
+    dataMax >= 0.5 ? `${(v*100).toFixed(1)}%` :
+    dataMax >= 0.05 ? `${(v*100).toFixed(2)}%` :
+    v.toFixed(4);
   return (
     <div style={{display:"flex", flexDirection:"column", gap: 10}}>
+      <div className="t-mute mono" style={{fontSize:"var(--fs-xs)", textAlign:"right"}}>
+        bar scaled to max = {fmt(dataMax)}
+      </div>
       {rows.map(r => (
         <div key={r.key} className="row-h" style={{gap: 12}}>
           <div style={{width: 110, display:"flex", alignItems:"center"}}>
@@ -235,13 +243,13 @@ function ConditionDifficulty({ conds, matrix }) {
             {r.avg != null && (
               <div style={{
                 position:"absolute", left:0, top:0, bottom:0,
-                width: `${(r.avg/max)*100}%`,
-                background: Uov.accColor(r.avg),
+                width: `${(r.avg/dataMax)*100}%`,
+                background: Uov.accColor(r.avg / Math.max(dataMax, 1e-9)),
                 borderRadius: 3, opacity: 0.85,
               }} />
             )}
           </div>
-          <div className="mono t-num" style={{width:60, textAlign:"right", fontSize:"var(--fs-sm)"}}>{Uov.fmtPct(r.avg)}</div>
+          <div className="mono t-num" style={{width:80, textAlign:"right", fontSize:"var(--fs-sm)"}}>{fmt(r.avg)}</div>
         </div>
       ))}
     </div>
