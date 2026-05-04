@@ -296,13 +296,16 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
                 const v = valueAt(mid, conds[i].key);
                 if (v == null) return null;
                 const isHover = hover && hover.model === mid && hover.condition === conds[i].key;
+                const row = matrix.find(r => r.model===mid && r.condition===conds[i].key);
                 return (
                   <circle key={i} cx={p[0]} cy={p[1]} r={isHover ? 5 : 3}
                     fill={color} className="hover-target"
                     onMouseEnter={()=>setHover({
                       svgX: p[0], svgY: p[1],
                       model: mid, condition: conds[i].label, value: v, color,
-                      metricKey: activeMetric === "auto" ? (matrix.find(r => r.model===mid && r.condition===conds[i].key)?.metric_kind || "auto") : activeMetric,
+                      metricKey: activeMetric === "auto" ? (row?.metric_kind || "auto") : activeMetric,
+                      runId: row?.run_id || null,
+                      n: row?.n,
                     })}
                   />
                 );
@@ -327,6 +330,12 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
           {hover.metricKey && hover.metricKey !== "auto" && (
             <div className="tt-row" style={{marginTop:2}}>
               <span className="tt-label" style={{fontSize:"10px"}}>{hover.metricKey}</span>
+            </div>
+          )}
+          {hover.runId && (
+            <div className="tt-row" style={{marginTop:4, opacity:0.7}}>
+              <span className="tt-label" style={{fontSize:"10px"}}>run</span>
+              <span className="tt-val" style={{fontSize:"10px"}}>{hover.runId.length > 32 ? hover.runId.slice(0,29)+'…' : hover.runId}{hover.n ? ` · n=${hover.n}` : ''}</span>
             </div>
           )}
         </div>
