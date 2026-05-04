@@ -135,7 +135,7 @@ function LeaderboardScreen({ datasetId, taskId, scale }) {
                 <div className="card-sub">Where each model breaks down</div>
               </div>
               <div className="card-body">
-                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} taskId={taskId} scale={scale} />
+                <PerConditionLines summary={data.slice(0,4)} datasetId={ds.id} taskId={taskId} scale={scale} availMetrics={Ulb.availableMetrics(ds.id, taskId, scale)} />
               </div>
             </div>
             <div className="card">
@@ -154,18 +154,24 @@ function LeaderboardScreen({ datasetId, taskId, scale }) {
   );
 }
 
-function PerConditionLines({ summary, datasetId, taskId, scale }) {
+function PerConditionLines({ summary, datasetId, taskId, scale, availMetrics }) {
   const [hoverIdx, setHoverIdx] = useStateLB(null);
+  const [metricKey, setMetricKey] = useStateLB("auto");
   const conds = Ulb.conditionsOf(datasetId);
   const matrix = Ulb.matrixFor(datasetId, taskId, scale);
   const colors = ["var(--accent)", "var(--sev-1)", "var(--sev-2)", "var(--sev-3)"];
   const w = 560, h = 200, pad = 40;
   if (!conds.length || !summary.length) return <div className="t-mute">No data.</div>;
 
+  const valueAt = (modelId, condKey) => {
+    const row = matrix.find(r => r.model === modelId && r.condition === condKey);
+    return Ulb.metricValue(row, metricKey);
+  };
+
   let dataMax = 0;
   for (const m of summary) for (const c of conds) {
-    const row = matrix.find(r => r.model === m.id && r.condition === c.key);
-    if (row && row.acc != null && row.acc > dataMax) dataMax = row.acc;
+    const v = valueAt(m.id, c.key);
+    if (v != null && v > dataMax) dataMax = v;
   }
   const niceCeil = (v) => {
     const cs = [0.005, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.8, 1.0];
@@ -183,6 +189,14 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
 
   return (
     <div className="chart-wrap">
+      <div style={{display:"flex", justifyContent:"flex-end", marginBottom:6}}>
+        <select className="select" value={metricKey} onChange={e=>setMetricKey(e.target.value)}
+          style={{height:24, fontSize:"var(--fs-xs)", minWidth:160}}
+          title="Pick which metric to plot">
+          <option value="auto">metric: auto (primary)</option>
+          {(availMetrics || []).map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </div>
       <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height:220}}
         onMouseLeave={()=>setHoverIdx(null)}>
         {ticks.map(t => (
@@ -210,8 +224,8 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
         })}
         {summary.map((m, mi) => {
           const pts = conds.map((c,i) => {
-            const row = matrix.find(r => r.model === m.id && r.condition === c.key);
-            return row && row.acc != null ? [X(i), Y(row.acc), row.acc] : null;
+            const v = valueAt(m.id, c.key);
+            return v != null ? [X(i), Y(v), v] : null;
           });
           const valid = pts.filter(Boolean);
           if (valid.length < 2) return null;
@@ -236,14 +250,14 @@ function PerConditionLines({ summary, datasetId, taskId, scale }) {
         }}>
           <div className="tt-title">{conds[hoverIdx].label}</div>
           {summary.map((m, mi) => {
-            const row = matrix.find(r => r.model === m.id && r.condition === conds[hoverIdx].key);
+            const v = valueAt(m.id, conds[hoverIdx].key);
             return (
               <div key={m.id} className="tt-row">
                 <span className="tt-label">
                   <span className="swatch" style={{background: colors[mi % colors.length]}} />
                   {m.id.split(/[-_]/)[0]}
                 </span>
-                <span className="tt-val">{row && row.acc != null ? fmt(row.acc) : "—"}</span>
+                <span className="tt-val">{v != null ? fmt(v) : "—"}</span>
               </div>
             );
           })}
