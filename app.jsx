@@ -7,22 +7,30 @@ function App() {
   const [taskId, setTaskId] = useStateApp("all");
   const [scale, setScale] = useStateApp("full");
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks({
-    "theme":   "dark",
+    "theme":   "light",
     "density": "cozy",
-    "accent":  "cyan",
+    "accent":  "orange",
     "showCost": true,
-  }) : [{theme:"dark", density:"cozy", accent:"cyan", showCost: true}, () => {}];
+  }) : [{theme:"light", density:"cozy", accent:"orange", showCost: true}, () => {}];
 
   useEffectApp(() => {
     document.documentElement.setAttribute("data-theme", tweaks.theme);
     document.documentElement.setAttribute("data-density", tweaks.density);
-    const accentMap = {
+    // Light-mode accents pinned to ConSynth-X palette; dark-mode accents
+    // remain saturated oklch tones so the existing dark theme still works.
+    const isLight = tweaks.theme === "light";
+    const accentMap = isLight ? {
+      orange: { a: "#C2410C", a2: "#B45309" },
+      cyan:   { a: "#0E7490", a2: "#155E75" },
+      green:  { a: "#15803D", a2: "#166534" },
+      violet: { a: "#6D28D9", a2: "#5B21B6" },
+    } : {
       cyan:   { a: "oklch(0.78 0.13 200)", a2: "oklch(0.68 0.15 200)" },
       orange: { a: "oklch(0.78 0.16 55)",  a2: "oklch(0.70 0.18 55)"  },
       green:  { a: "oklch(0.78 0.16 155)", a2: "oklch(0.70 0.17 155)" },
       violet: { a: "oklch(0.72 0.16 290)", a2: "oklch(0.62 0.18 290)" },
     };
-    const c = accentMap[tweaks.accent] || accentMap.cyan;
+    const c = accentMap[tweaks.accent] || (isLight ? accentMap.orange : accentMap.cyan);
     document.documentElement.style.setProperty("--accent", c.a);
     document.documentElement.style.setProperty("--accent-2", c.a2);
   }, [tweaks.theme, tweaks.density, tweaks.accent]);
