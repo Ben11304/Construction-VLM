@@ -165,14 +165,16 @@ function Bar({ value, max = 1, color }) {
 
 function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
+  const [hiddenConds, setHiddenConds] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
   const [localMetric, setLocalMetric] = useState(metricKey || "auto");
   const [hover, setHover] = useState(null);
   const activeMetric = localMetric;
   const ds = getDataset(datasetId);
   if (!ds) return null;
-  const conds = ds.conditions;
-  if (!conds.length) return <div className="t-mute">No conditions to plot.</div>;
+  const allConds = ds.conditions;
+  if (!allConds.length) return <div className="t-mute">No conditions to plot.</div>;
+  const conds = allConds.filter(c => !hiddenConds.has(c.key));
   const matrix = matrixFor(datasetId, taskId, scale);
   if (!matrix.length) return <div className="t-mute">No data for radar.</div>;
 
@@ -257,6 +259,11 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
           {autoScale ? "auto-scale" : "0–100%"}
         </span>
       </div>
+      {conds.length < 3 ? (
+        <div className="t-mute" style={{textAlign:"center", padding:"24px 8px", fontSize:"var(--fs-xs)"}}>
+          Select ≥ 3 conditions to render the radar (currently {conds.length}).
+        </div>
+      ) : (
       <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}} onMouseLeave={()=>setHover(null)}>
         {rings.map((v, i) => (
           <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
@@ -314,7 +321,8 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
           );
         })}
       </svg>
-      {hover && (
+      )}
+      {hover && conds.length >= 3 && (
         <div className="tooltip" style={{
           left: `${(hover.svgX / w) * 100}%`,
           top: `${(hover.svgY / h) * 100}%`,
@@ -340,6 +348,48 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
           )}
         </div>
       )}
+      <div style={{marginTop:10, paddingTop:8, borderTop:"1px dashed var(--border)"}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6, gap:8, flexWrap:"wrap"}}>
+          <span className="t-mute" style={{fontSize:"var(--fs-xs)"}}>
+            Conditions ({conds.length}/{allConds.length})
+          </span>
+          <span style={{display:"flex", gap:6}}>
+            <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
+                  onClick={()=>setHiddenConds(new Set())}>all</span>
+            <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
+                  onClick={()=>setHiddenConds(new Set(allConds.map(c=>c.key)))}>none</span>
+            <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
+                  onClick={()=>{
+                    const inv = new Set();
+                    for (const c of allConds) if (!hiddenConds.has(c.key)) inv.add(c.key);
+                    setHiddenConds(inv);
+                  }}>invert</span>
+          </span>
+        </div>
+        <div style={{display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center"}}>
+          {allConds.map((c) => {
+            const isHidden = hiddenConds.has(c.key);
+            return (
+              <span key={c.key}
+                className="chip mono"
+                style={{
+                  cursor:"pointer",
+                  fontSize:"var(--fs-xs)",
+                  opacity: isHidden ? 0.35 : 1,
+                }}
+                onClick={() => {
+                  const next = new Set(hiddenConds);
+                  if (isHidden) next.delete(c.key); else next.add(c.key);
+                  setHiddenConds(next);
+                }}
+              >
+                <span className="chip-dot" style={{background: sevColor(c.severity)}} />
+                {c.label}
+              </span>
+            );
+          })}
+        </div>
+      </div>
       <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:8, justifyContent:"center"}}>
         {allModelIds.map((mid, mi) => {
           const isHidden = hidden.has(mid);
