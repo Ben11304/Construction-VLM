@@ -59,6 +59,18 @@ function metricKindFor(datasetId, taskId, scale) {
   const r = matrixFor(datasetId, taskId, scale).find(x => x.metric_kind);
   return r ? r.metric_kind : null;
 }
+function availableMetrics(datasetId, taskId, scale) {
+  const keys = new Set();
+  for (const r of matrixFor(datasetId, taskId, scale)) {
+    if (r.metrics) for (const k of Object.keys(r.metrics)) keys.add(k);
+  }
+  return [...keys].sort();
+}
+function metricValue(row, metricKey) {
+  if (!row) return null;
+  if (metricKey == null || metricKey === "auto") return row.acc;
+  return row.metrics && row.metrics[metricKey] != null ? row.metrics[metricKey] : null;
+}
 function modelsInDataset(datasetId, taskId, scale) {
   const ids = new Set(matrixFor(datasetId, taskId, scale).map(r => r.model));
   return D.models.filter(m => ids.has(m.id));
@@ -151,10 +163,12 @@ function Bar({ value, max = 1, color }) {
   );
 }
 
-function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pickedModels }) {
+function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
-  const [hover, setHover] = useState(null); // {x, y, model, condition, value, color}
+  const [localMetric, setLocalMetric] = useState(metricKey || "auto");
+  const [hover, setHover] = useState(null);
+  const activeMetric = localMetric;
   const ds = getDataset(datasetId);
   if (!ds) return null;
   const conds = ds.conditions;
@@ -167,13 +181,18 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
     ? pickedModels
     : summary.slice(0, top).map(s => s.id);
 
-  // Compute max across visible polygons. Cap at 1.0; tiny ceiling guard.
+  const availMetrics = availableMetrics(datasetId, taskId, scale);
+  // Compute max across visible polygons under the active metric.
   const visible = allModelIds.filter(mid => !hidden.has(mid));
+  const valueAt = (mid, condKey) => {
+    const row = matrix.find(r => r.model === mid && r.condition === condKey);
+    return metricValue(row, activeMetric);
+  };
   let dataMax = 0;
   for (const mid of visible) {
     for (const c of conds) {
-      const row = matrix.find(r => r.model === mid && r.condition === c.key);
-      if (row && row.acc != null && row.acc > dataMax) dataMax = row.acc;
+      const v = valueAt(mid, c.key);
+      if (v != null && v > dataMax) dataMax = v;
     }
   }
   // Round up to a "nice" upper bound for cleaner ticks.
@@ -222,7 +241,13 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
 
   return (
     <div className="chart-wrap">
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6, gap:8, flexWrap:"wrap"}}>
+        <select className="select" value={activeMetric} onChange={e=>setLocalMetric(e.target.value)}
+          style={{height:24, fontSize:"var(--fs-xs)", minWidth:160}}
+          title="Pick which metric to plot on this radar">
+          <option value="auto">metric: auto (primary)</option>
+          {availMetrics.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
         <span className="t-mute mono" style={{fontSize:"var(--fs-xs)"}}>
           axis max: {fmtTick(1)} {autoScale ? "(auto)" : "(fixed)"}
         </span>
@@ -259,8 +284,8 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
           if (hidden.has(mid)) return null;
           const color = colorOf(mi);
           const pts = conds.map((c, i) => {
-            const row = matrix.find(r => r.model === mid && r.condition === c.key);
-            const nv = norm(row && row.acc);
+            const v = valueAt(mid, c.key);
+            const nv = norm(v);
             return xy(i, nv != null ? nv : 0);
           });
           const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
@@ -268,8 +293,7 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
             <g key={mid}>
               <path d={d} fill={color} fillOpacity="0.10" stroke={color} strokeWidth="1.6" />
               {pts.map((p, i) => {
-                const row = matrix.find(r => r.model === mid && r.condition === conds[i].key);
-                const v = row && row.acc != null ? row.acc : null;
+                const v = valueAt(mid, conds[i].key);
                 if (v == null) return null;
                 const isHover = hover && hover.model === mid && hover.condition === conds[i].key;
                 return (
@@ -278,6 +302,7 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
                     onMouseEnter={()=>setHover({
                       svgX: p[0], svgY: p[1],
                       model: mid, condition: conds[i].label, value: v, color,
+                      metricKey: activeMetric === "auto" ? (matrix.find(r => r.model===mid && r.condition===conds[i].key)?.metric_kind || "auto") : activeMetric,
                     })}
                   />
                 );
@@ -299,6 +324,11 @@ function RadarChart({ datasetId, taskId, scale, top = 6, size = 360, models: pic
             <span className="tt-label">{hover.condition}</span>
             <span className="tt-val">{fmtVal(hover.value)}</span>
           </div>
+          {hover.metricKey && hover.metricKey !== "auto" && (
+            <div className="tt-row" style={{marginTop:2}}>
+              <span className="tt-label" style={{fontSize:"10px"}}>{hover.metricKey}</span>
+            </div>
+          )}
         </div>
       )}
       <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:8, justifyContent:"center"}}>
@@ -483,6 +513,7 @@ window.__UI = {
   sevColor, accColor, accBg,
   getDataset, conditionsOf, conditionMeta, matrixFor, modelsInDataset, summaryFor,
   tasksForDataset, metricKindFor, runsFiltered,
+  availableMetrics, metricValue,
   SeverityDot, ConditionTag, StatusChip, Bar, EmptyState, RadarChart,
   Sidebar, Topbar, DatasetSelector, TaskSelector, ScaleSelector,
 };
