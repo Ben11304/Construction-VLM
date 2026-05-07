@@ -6,7 +6,7 @@ function App() {
   const [datasetId, setDatasetId] = useStateApp(window.__DATA.datasets[0]?.id || null);
   const [taskId, setTaskId] = useStateApp("all");
   const [scale, setScale] = useStateApp("full");
-  const [shotsFilter, setShotsFilter] = useStateApp("all");
+  const [shotsFilter, setShotsFilter] = useStateApp("zero");
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks({
     "theme":   "light",
     "density": "cozy",
