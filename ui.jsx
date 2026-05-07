@@ -38,11 +38,14 @@ function conditionMeta(datasetId, condKey) {
   return conditionsOf(datasetId).find(c => c.key === condKey) || { key: condKey, label: condKey, severity: 0, group: condKey };
 }
 function _matchShots(rowShots, shotsFilter) {
-  if (shotsFilter == null || shotsFilter === "all") return true;
+  if (shotsFilter == null || shotsFilter === "all" || shotsFilter === "compare") return true;
   const n = rowShots ?? 0;
   if (shotsFilter === "zero") return n === 0;
   if (shotsFilter === "few") return n > 0;
   return true;
+}
+function _shotLabel(shots) {
+  return (shots ?? 0) > 0 ? `${shots}-shot` : "0-shot";
 }
 function matrixFor(datasetId, taskId, scale, shotsFilter) {
   return D.matrix.filter(r =>
@@ -86,20 +89,28 @@ function modelsInDataset(datasetId, taskId, scale, shotsFilter) {
 }
 function summaryFor(datasetId, taskId, scale, shotsFilter) {
   const rows = matrixFor(datasetId, taskId, scale, shotsFilter);
-  const byModel = {};
+  const compare = shotsFilter === "compare";
+  // Group by `model` normally; group by `model::shots` when comparing so the
+  // same model surfaces twice (e.g. "qwen2.5-vl-7b · 0-shot" + "· 5-shot").
+  const groupKey = (r) => compare ? `${r.model}::${r.shots ?? 0}` : r.model;
+  const byKey = {};
   for (const r of rows) {
-    if (!byModel[r.model]) byModel[r.model] = [];
-    byModel[r.model].push(r);
+    const k = groupKey(r);
+    if (!byKey[k]) byKey[k] = [];
+    byKey[k].push(r);
   }
-  // Run-level aggregates by (model, dataset, task) — corpus-level when present
-  // (BLEU/mIoU are NOT row-averages and must come from metrics.json).
+  // Run-level aggregates by (model[+shots], dataset, task) — corpus-level when
+  // present (BLEU/mIoU are NOT row-averages and must come from metrics.json).
   const runsByMT = {};
   for (const r of runsFiltered(datasetId, taskId, scale, shotsFilter)) {
-    if (!runsByMT[r.model]) runsByMT[r.model] = [];
-    runsByMT[r.model].push(r);
+    const k = compare ? `${r.model}::${r.shots ?? 0}` : r.model;
+    if (!runsByMT[k]) runsByMT[k] = [];
+    runsByMT[k].push(r);
   }
 
-  return Object.entries(byModel).map(([modelId, mrows]) => {
+  return Object.entries(byKey).map(([key, mrows]) => {
+    const modelId = compare ? key.split("::")[0] : key;
+    const shots = compare ? Number(key.split("::")[1] ?? 0) : null;
     const m = D.models.find(x => x.id === modelId) || {
       id: modelId, family: "—", params: "—", backend: "—", type: "open"
     };
@@ -107,7 +118,7 @@ function summaryFor(datasetId, taskId, scale, shotsFilter) {
     const rowMacro = rowAccs.length ? rowAccs.reduce((s,v)=>s+v,0)/rowAccs.length : null;
 
     // Prefer the latest run's aggregate_metric (corpus-level, methodology-correct).
-    const myRuns = runsByMT[modelId] || [];
+    const myRuns = runsByMT[key] || [];
     const aggRuns = myRuns.filter(r => r.aggregate_metric != null);
     const aggAvg = aggRuns.length
       ? aggRuns.reduce((s,r) => s + r.aggregate_metric, 0) / aggRuns.length
@@ -130,7 +141,11 @@ function summaryFor(datasetId, taskId, scale, shotsFilter) {
     const totalCost = mrows.reduce((s,r) => s+(r.cost_usd||0), 0);
 
     return {
-      ...m, id: modelId,
+      ...m,
+      id: compare ? `${modelId} · ${_shotLabel(shots)}` : modelId,
+      modelId,
+      shots: compare ? shots : null,
+      groupKey: key,
       macroAcc, macroF1: macroAcc, macroSource, aggLabels,
       cleanAcc, augAcc, robustness, deltaClean,
       avgLat, totalCost, n_conditions: mrows.length, n_runs: myRuns.length,
@@ -172,7 +187,7 @@ function Bar({ value, max = 1, color }) {
   );
 }
 
-function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6, size = 360, models: pickedModels }) {
+function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6, size = 360, models: pickedModels, groups }) {
   const [hidden, setHidden] = useState(() => new Set());
   const [hiddenConds, setHiddenConds] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
@@ -188,21 +203,31 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
   if (!matrix.length) return <div className="t-mute">No data for radar.</div>;
 
   const summary = summaryFor(datasetId, taskId, scale, shotsFilter);
-  const allModelIds = pickedModels && pickedModels.length
-    ? pickedModels
-    : summary.slice(0, top).map(s => s.id);
+  // `groups` is the authoritative way to identify polygon series — each entry
+  // {id, modelId, shots} maps display-id (e.g. "qwen · 5-shot") → row filter.
+  // Falls back to legacy `models` array of plain model ids.
+  const seriesGroups = (groups && groups.length)
+    ? groups
+    : (pickedModels && pickedModels.length
+        ? pickedModels.map(mid => ({ id: mid, modelId: mid, shots: null }))
+        : summary.slice(0, top).map(s => ({ id: s.id, modelId: s.modelId || s.id, shots: s.shots ?? null })));
+  const allModelIds = seriesGroups.map(g => g.id);
 
   const availMetrics = availableMetrics(datasetId, taskId, scale, shotsFilter);
   // Compute max across visible polygons under the active metric.
-  const visible = allModelIds.filter(mid => !hidden.has(mid));
-  const valueAt = (mid, condKey) => {
-    const row = matrix.find(r => r.model === mid && r.condition === condKey);
+  const visible = seriesGroups.filter(g => !hidden.has(g.id));
+  const valueAt = (group, condKey) => {
+    const row = matrix.find(r =>
+      r.model === group.modelId
+      && r.condition === condKey
+      && (group.shots == null || (r.shots ?? 0) === group.shots)
+    );
     return metricValue(row, activeMetric);
   };
   let dataMax = 0;
-  for (const mid of visible) {
+  for (const g of visible) {
     for (const c of conds) {
-      const v = valueAt(mid, c.key);
+      const v = valueAt(g, c.key);
       if (v != null && v > dataMax) dataMax = v;
     }
   }
@@ -296,29 +321,29 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
           const [tx, ty] = xy(0, v);
           return <text key={v} x={tx + 4} y={ty + 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--muted)">{fmtTick(v)}</text>;
         })}
-        {allModelIds.map((mid, mi) => {
-          if (hidden.has(mid)) return null;
+        {seriesGroups.map((g, mi) => {
+          if (hidden.has(g.id)) return null;
           const color = colorOf(mi);
           const pts = conds.map((c, i) => {
-            const v = valueAt(mid, c.key);
+            const v = valueAt(g, c.key);
             const nv = norm(v);
             return xy(i, nv != null ? nv : 0);
           });
           const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
           return (
-            <g key={mid}>
+            <g key={g.id}>
               <path d={d} fill={color} fillOpacity="0.10" stroke={color} strokeWidth="1.6" />
               {pts.map((p, i) => {
-                const v = valueAt(mid, conds[i].key);
+                const v = valueAt(g, conds[i].key);
                 if (v == null) return null;
-                const isHover = hover && hover.model === mid && hover.condition === conds[i].key;
-                const row = matrix.find(r => r.model===mid && r.condition===conds[i].key);
+                const isHover = hover && hover.model === g.id && hover.condition === conds[i].key;
+                const row = matrix.find(r => r.model===g.modelId && r.condition===conds[i].key && (g.shots == null || (r.shots ?? 0) === g.shots));
                 return (
                   <circle key={i} cx={p[0]} cy={p[1]} r={isHover ? 5 : 3}
                     fill={color} className="hover-target"
                     onMouseEnter={()=>setHover({
                       svgX: p[0], svgY: p[1],
-                      model: mid, condition: conds[i].label, value: v, color,
+                      model: g.id, condition: conds[i].label, value: v, color,
                       metricKey: activeMetric === "auto" ? (row?.metric_kind || "auto") : activeMetric,
                       runId: row?.run_id || null,
                       n: row?.n,
@@ -400,10 +425,10 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
         </div>
       </div>
       <div style={{display:"flex", flexWrap:"wrap", gap:6, marginTop:8, justifyContent:"center"}}>
-        {allModelIds.map((mid, mi) => {
-          const isHidden = hidden.has(mid);
+        {seriesGroups.map((g, mi) => {
+          const isHidden = hidden.has(g.id);
           return (
-            <span key={mid}
+            <span key={g.id}
               className="chip mono"
               style={{
                 cursor:"pointer",
@@ -413,12 +438,12 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
               }}
               onClick={() => {
                 const next = new Set(hidden);
-                if (isHidden) next.delete(mid); else next.add(mid);
+                if (isHidden) next.delete(g.id); else next.add(g.id);
                 setHidden(next);
               }}
             >
               <span className="chip-dot" style={{background: colorOf(mi)}} />
-              {mid}
+              {g.id}
             </span>
           );
         })}
@@ -554,10 +579,11 @@ function DatasetSelector({ value, onChange }) {
 
 function ShotsSelector({ value, onChange }) {
   return (
-    <div className="segmented" title="Filter by in-context examples">
-      <button className={(value==null||value==="all")?"active":""} onClick={()=>onChange("all")}>all shots</button>
-      <button className={value==="zero"?"active":""} onClick={()=>onChange("zero")}>0-shot</button>
-      <button className={value==="few"?"active":""}  onClick={()=>onChange("few")}>few-shot</button>
+    <div className="segmented" title="Filter / split by in-context examples">
+      <button className={value==="zero"?"active":""}    onClick={()=>onChange("zero")}>0-shot</button>
+      <button className={value==="few"?"active":""}     onClick={()=>onChange("few")}>few-shot</button>
+      <button className={value==="compare"?"active":""} onClick={()=>onChange("compare")}>compare</button>
+      <button className={(value==null||value==="all")?"active":""} onClick={()=>onChange("all")}>all</button>
     </div>
   );
 }

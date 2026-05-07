@@ -100,8 +100,14 @@ function LeaderboardScreen({ datasetId, taskId, scale, shotsFilter }) {
                     <td className="mono t-mute">{i+1}</td>
                     <td>
                       <div className="row-h">
-                        <span style={{fontWeight:500}}>{s.id}</span>
+                        <span style={{fontWeight:500}}>{s.modelId || s.id}</span>
                         <span className="tag">{s.type === "closed" ? "API" : "OSS"}</span>
+                        {s.shots != null && (
+                          <span className="tag mono" style={{
+                            color: s.shots > 0 ? "var(--accent)" : "var(--muted)",
+                            borderColor: s.shots > 0 ? "var(--accent)" : "var(--border)"
+                          }}>{s.shots}-shot</span>
+                        )}
                       </div>
                     </td>
                     <td className="t-text2">{s.family}</td>
@@ -144,7 +150,7 @@ function LeaderboardScreen({ datasetId, taskId, scale, shotsFilter }) {
                 <div className="card-sub">Top {Math.min(6, data.length)} models · click legend to toggle</div>
               </div>
               <div className="card-body">
-                <Ulb.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} shotsFilter={shotsFilter} top={6} size={360} models={data.slice(0,6).map(s => s.id)} />
+                <Ulb.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} shotsFilter={shotsFilter} top={6} size={360} models={data.slice(0,6).map(s => s.id)} groups={data.slice(0,6).map(s => ({id: s.id, modelId: s.modelId || s.id, shots: s.shots}))} />
               </div>
             </div>
           </div>
@@ -163,14 +169,20 @@ function PerConditionLines({ summary, datasetId, taskId, scale, shotsFilter, ava
   const w = 560, h = 200, pad = 40;
   if (!conds.length || !summary.length) return <div className="t-mute">No data.</div>;
 
-  const valueAt = (modelId, condKey) => {
-    const row = matrix.find(r => r.model === modelId && r.condition === condKey);
+  const valueAt = (sumRow, condKey) => {
+    const mid = sumRow.modelId || sumRow.id;
+    const wantShots = sumRow.shots;
+    const row = matrix.find(r =>
+      r.model === mid
+      && r.condition === condKey
+      && (wantShots == null || (r.shots ?? 0) === wantShots)
+    );
     return Ulb.metricValue(row, metricKey);
   };
 
   let dataMax = 0;
   for (const m of summary) for (const c of conds) {
-    const v = valueAt(m.id, c.key);
+    const v = valueAt(m, c.key);
     if (v != null && v > dataMax) dataMax = v;
   }
   const niceCeil = (v) => {
@@ -224,7 +236,7 @@ function PerConditionLines({ summary, datasetId, taskId, scale, shotsFilter, ava
         })}
         {summary.map((m, mi) => {
           const pts = conds.map((c,i) => {
-            const v = valueAt(m.id, c.key);
+            const v = valueAt(m, c.key);
             return v != null ? [X(i), Y(v), v] : null;
           });
           const valid = pts.filter(Boolean);
@@ -250,7 +262,7 @@ function PerConditionLines({ summary, datasetId, taskId, scale, shotsFilter, ava
         }}>
           <div className="tt-title">{conds[hoverIdx].label}</div>
           {summary.map((m, mi) => {
-            const v = valueAt(m.id, conds[hoverIdx].key);
+            const v = valueAt(m, conds[hoverIdx].key);
             return (
               <div key={m.id} className="tt-row">
                 <span className="tt-label">
