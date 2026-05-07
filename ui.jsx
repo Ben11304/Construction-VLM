@@ -37,31 +37,40 @@ function conditionsOf(datasetId) {
 function conditionMeta(datasetId, condKey) {
   return conditionsOf(datasetId).find(c => c.key === condKey) || { key: condKey, label: condKey, severity: 0, group: condKey };
 }
-function matrixFor(datasetId, taskId, scale) {
+function _matchShots(rowShots, shotsFilter) {
+  if (shotsFilter == null || shotsFilter === "all") return true;
+  const n = rowShots ?? 0;
+  if (shotsFilter === "zero") return n === 0;
+  if (shotsFilter === "few") return n > 0;
+  return true;
+}
+function matrixFor(datasetId, taskId, scale, shotsFilter) {
   return D.matrix.filter(r =>
     r.dataset === datasetId
     && (taskId == null || taskId === "all" || r.task === taskId)
     && (scale == null || scale === "all" || r.scale === scale)
+    && _matchShots(r.shots, shotsFilter)
   );
 }
-function runsFiltered(datasetId, taskId, scale) {
+function runsFiltered(datasetId, taskId, scale, shotsFilter) {
   return D.runs.filter(r =>
     (datasetId == null || r.dataset === datasetId)
     && (taskId == null || taskId === "all" || r.task === taskId)
     && (scale == null || scale === "all" || r.scale === scale)
+    && _matchShots(r.shots, shotsFilter)
   );
 }
 function tasksForDataset(datasetId) {
   const ids = new Set(D.matrix.filter(r => r.dataset === datasetId).map(r => r.task));
   return [...ids].filter(Boolean).sort();
 }
-function metricKindFor(datasetId, taskId, scale) {
-  const r = matrixFor(datasetId, taskId, scale).find(x => x.metric_kind);
+function metricKindFor(datasetId, taskId, scale, shotsFilter) {
+  const r = matrixFor(datasetId, taskId, scale, shotsFilter).find(x => x.metric_kind);
   return r ? r.metric_kind : null;
 }
-function availableMetrics(datasetId, taskId, scale) {
+function availableMetrics(datasetId, taskId, scale, shotsFilter) {
   const keys = new Set();
-  for (const r of matrixFor(datasetId, taskId, scale)) {
+  for (const r of matrixFor(datasetId, taskId, scale, shotsFilter)) {
     if (r.metrics) for (const k of Object.keys(r.metrics)) keys.add(k);
   }
   return [...keys].sort();
@@ -71,12 +80,12 @@ function metricValue(row, metricKey) {
   if (metricKey == null || metricKey === "auto") return row.acc;
   return row.metrics && row.metrics[metricKey] != null ? row.metrics[metricKey] : null;
 }
-function modelsInDataset(datasetId, taskId, scale) {
-  const ids = new Set(matrixFor(datasetId, taskId, scale).map(r => r.model));
+function modelsInDataset(datasetId, taskId, scale, shotsFilter) {
+  const ids = new Set(matrixFor(datasetId, taskId, scale, shotsFilter).map(r => r.model));
   return D.models.filter(m => ids.has(m.id));
 }
-function summaryFor(datasetId, taskId, scale) {
-  const rows = matrixFor(datasetId, taskId, scale);
+function summaryFor(datasetId, taskId, scale, shotsFilter) {
+  const rows = matrixFor(datasetId, taskId, scale, shotsFilter);
   const byModel = {};
   for (const r of rows) {
     if (!byModel[r.model]) byModel[r.model] = [];
@@ -85,7 +94,7 @@ function summaryFor(datasetId, taskId, scale) {
   // Run-level aggregates by (model, dataset, task) — corpus-level when present
   // (BLEU/mIoU are NOT row-averages and must come from metrics.json).
   const runsByMT = {};
-  for (const r of runsFiltered(datasetId, taskId, scale)) {
+  for (const r of runsFiltered(datasetId, taskId, scale, shotsFilter)) {
     if (!runsByMT[r.model]) runsByMT[r.model] = [];
     runsByMT[r.model].push(r);
   }
@@ -163,7 +172,7 @@ function Bar({ value, max = 1, color }) {
   );
 }
 
-function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, models: pickedModels }) {
+function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6, size = 360, models: pickedModels }) {
   const [hidden, setHidden] = useState(() => new Set());
   const [hiddenConds, setHiddenConds] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
@@ -175,15 +184,15 @@ function RadarChart({ datasetId, taskId, scale, metricKey, top = 6, size = 360, 
   const allConds = ds.conditions;
   if (!allConds.length) return <div className="t-mute">No conditions to plot.</div>;
   const conds = allConds.filter(c => !hiddenConds.has(c.key));
-  const matrix = matrixFor(datasetId, taskId, scale);
+  const matrix = matrixFor(datasetId, taskId, scale, shotsFilter);
   if (!matrix.length) return <div className="t-mute">No data for radar.</div>;
 
-  const summary = summaryFor(datasetId, taskId, scale);
+  const summary = summaryFor(datasetId, taskId, scale, shotsFilter);
   const allModelIds = pickedModels && pickedModels.length
     ? pickedModels
     : summary.slice(0, top).map(s => s.id);
 
-  const availMetrics = availableMetrics(datasetId, taskId, scale);
+  const availMetrics = availableMetrics(datasetId, taskId, scale, shotsFilter);
   // Compute max across visible polygons under the active metric.
   const visible = allModelIds.filter(mid => !hidden.has(mid));
   const valueAt = (mid, condKey) => {
@@ -543,7 +552,16 @@ function DatasetSelector({ value, onChange }) {
   );
 }
 
-function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, scale, setScale, onNewRun }) {
+function ShotsSelector({ value, onChange }) {
+  return (
+    <div className="segmented" title="Filter by in-context examples">
+      <button className={(value==null||value==="all")?"active":""} onClick={()=>onChange("all")}>all shots</button>
+      <button className={value==="zero"?"active":""} onClick={()=>onChange("zero")}>0-shot</button>
+      <button className={value==="few"?"active":""}  onClick={()=>onChange("few")}>few-shot</button>
+    </div>
+  );
+}
+function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, scale, setScale, shotsFilter, setShotsFilter, onNewRun }) {
   const labels = {
     overview: "Overview", leaderboard: "Leaderboard", robustness: "Robustness matrix",
     runs: "Runs", samples: "Sample inspector",
@@ -560,6 +578,7 @@ function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, scale, setS
         <DatasetSelector value={datasetId} onChange={setDatasetId} />
         <TaskSelector value={taskId} onChange={setTaskId} datasetId={datasetId} />
         <ScaleSelector value={scale} onChange={setScale} datasetId={datasetId} taskId={taskId} />
+        <ShotsSelector value={shotsFilter} onChange={setShotsFilter} />
         {D.repo_url && <a className="btn btn-ghost btn-sm" href={D.repo_url} target="_blank" rel="noreferrer">repo ↗</a>}
         <span className="mono t-mute" style={{fontSize:"var(--fs-xs)"}}>built {D.generated_at.slice(0,16).replace("T"," ")}</span>
       </div>
@@ -574,5 +593,5 @@ window.__UI = {
   tasksForDataset, metricKindFor, runsFiltered,
   availableMetrics, metricValue,
   SeverityDot, ConditionTag, StatusChip, Bar, EmptyState, RadarChart,
-  Sidebar, Topbar, DatasetSelector, TaskSelector, ScaleSelector,
+  Sidebar, Topbar, DatasetSelector, TaskSelector, ScaleSelector, ShotsSelector,
 };

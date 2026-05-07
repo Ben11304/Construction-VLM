@@ -3,12 +3,12 @@ const { useMemo: useMemoOv } = React;
 const Dov = window.__DATA;
 const Uov = window.__UI;
 
-function OverviewScreen({ datasetId, taskId, scale, goto }) {
+function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
   const ds = Uov.getDataset(datasetId);
-  const summary = useMemoOv(() => ds ? Uov.summaryFor(ds.id, taskId, scale) : [], [datasetId, taskId, scale]);
+  const summary = useMemoOv(() => ds ? Uov.summaryFor(ds.id, taskId, scale, shotsFilter) : [], [datasetId, taskId, scale, shotsFilter]);
   const conds = ds ? ds.conditions : [];
-  const matrix = ds ? Uov.matrixFor(ds.id, taskId, scale) : [];
-  const metricKind = ds ? Uov.metricKindFor(ds.id, taskId, scale) : null;
+  const matrix = ds ? Uov.matrixFor(ds.id, taskId, scale, shotsFilter) : [];
+  const metricKind = ds ? Uov.metricKindFor(ds.id, taskId, scale, shotsFilter) : null;
   const top = summary[0];
   const mostRobust = [...summary].filter(s => s.robustness != null).sort((a,b)=>b.robustness-a.robustness)[0];
   const samplesEvaluated = Dov.runs.filter(r => r.status === "done").reduce((s,r) => s+r.n, 0);

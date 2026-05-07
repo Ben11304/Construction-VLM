@@ -6,6 +6,7 @@ function App() {
   const [datasetId, setDatasetId] = useStateApp(window.__DATA.datasets[0]?.id || null);
   const [taskId, setTaskId] = useStateApp("all");
   const [scale, setScale] = useStateApp("full");
+  const [shotsFilter, setShotsFilter] = useStateApp("all");
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks({
     "theme":   "light",
     "density": "cozy",
@@ -42,7 +43,7 @@ function App() {
   const S  = window.__SamplesScreen;
   const St = window.__StubScreens;
 
-  const screenProps = { datasetId, setDatasetId, taskId, setTaskId, scale, setScale, goto: setRoute };
+  const screenProps = { datasetId, setDatasetId, taskId, setTaskId, scale, setScale, shotsFilter, setShotsFilter, goto: setRoute };
   let content;
   if      (route === "overview")    content = <O  {...screenProps} />;
   else if (route === "leaderboard") content = <L  {...screenProps} />;
@@ -68,6 +69,8 @@ function App() {
           setTaskId={setTaskId}
           scale={scale}
           setScale={setScale}
+          shotsFilter={shotsFilter}
+          setShotsFilter={setShotsFilter}
           onNewRun={()=>setRoute("runs")}
         />
         {content}

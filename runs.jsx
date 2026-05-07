@@ -7,12 +7,15 @@ function RunsScreen({ datasetId, taskId, scale }) {
   const [filter, setFilter] = useStateRn("");
   const [statusF, setStatusF] = useStateRn("all");
   const [datasetF, setDatasetF] = useStateRn("all");
+  const [shotsF, setShotsF] = useStateRn("all");
 
   const filtered = Drn.runs.filter(r => {
     if (statusF !== "all" && r.status !== statusF) return false;
     if (datasetF !== "all" && r.dataset !== datasetF) return false;
     if (taskId !== "all" && taskId != null && r.task !== taskId) return false;
     if (scale !== "all" && scale != null && r.scale !== scale) return false;
+    if (shotsF === "zero" && (r.shots ?? 0) !== 0) return false;
+    if (shotsF === "few" && (r.shots ?? 0) === 0) return false;
     if (filter && !(r.id + r.model).toLowerCase().includes(filter.toLowerCase())) return false;
     return true;
   });
@@ -32,6 +35,11 @@ function RunsScreen({ datasetId, taskId, scale }) {
           {["all","running","queued","done","failed"].map(s => (
             <button key={s} className={statusF===s?"active":""} onClick={()=>setStatusF(s)}>{s}</button>
           ))}
+        </div>
+        <div className="segmented" title="In-context examples in prompt">
+          <button className={shotsF==="all"?"active":""}  onClick={()=>setShotsF("all")}>all shots</button>
+          <button className={shotsF==="zero"?"active":""} onClick={()=>setShotsF("zero")}>0-shot</button>
+          <button className={shotsF==="few"?"active":""}  onClick={()=>setShotsF("few")}>few-shot</button>
         </div>
         {Drn.datasets.length > 1 && (
           <select className="select" value={datasetF} onChange={e=>setDatasetF(e.target.value)}>
@@ -55,6 +63,7 @@ function RunsScreen({ datasetId, taskId, scale }) {
                 <th>Dataset</th>
                 <th>Task</th>
                 <th>Prompt</th>
+                <th>Shots</th>
                 <th>Scale</th>
                 <th>Status</th>
                 <th className="num">N</th>
@@ -70,6 +79,11 @@ function RunsScreen({ datasetId, taskId, scale }) {
                   <td className="mono t-text2">{r.dataset}</td>
                   <td className="t-text2">{r.task}</td>
                   <td className="mono t-mute">{r.prompt}</td>
+                  <td>
+                    {(r.shots ?? 0) > 0
+                      ? <span className="tag mono" style={{color:"var(--accent)", borderColor:"var(--accent)"}}>{r.shots}-shot</span>
+                      : <span className="tag mono t-mute">0-shot</span>}
+                  </td>
                   <td><span className="tag mono" style={{color: r.scale === "smoke" ? "var(--warn)" : "var(--good)"}}>{r.scale}</span></td>
                   <td><Urn.StatusChip status={r.status} /></td>
                   <td className="num mono">{r.n.toLocaleString()}</td>

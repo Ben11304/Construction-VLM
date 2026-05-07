@@ -3,15 +3,15 @@ const { useState: useStateRM, useMemo: useMemoRM } = React;
 const Drm = window.__DATA;
 const Urm = window.__UI;
 
-function RobustnessScreen({ datasetId, taskId, scale }) {
+function RobustnessScreen({ datasetId, taskId, scale, shotsFilter }) {
   const [metric, setMetric] = useStateRM("acc");
   const [selected, setSelected] = useStateRM(null);
   const [hover, setHover] = useStateRM(null);
   const ds = Urm.getDataset(datasetId);
   const conds = ds ? ds.conditions : [];
-  const matrix = ds ? Urm.matrixFor(ds.id, taskId, scale) : [];
-  const models = ds ? Urm.modelsInDataset(ds.id, taskId, scale) : [];
-  const metricKind = ds ? Urm.metricKindFor(ds.id, taskId, scale) : null;
+  const matrix = ds ? Urm.matrixFor(ds.id, taskId, scale, shotsFilter) : [];
+  const models = ds ? Urm.modelsInDataset(ds.id, taskId, scale, shotsFilter) : [];
+  const metricKind = ds ? Urm.metricKindFor(ds.id, taskId, scale, shotsFilter) : null;
 
   if (!ds) return <div className="page"><Urm.EmptyState title="No dataset selected" /></div>;
   if (!matrix.length) return (
@@ -149,7 +149,7 @@ function RobustnessScreen({ datasetId, taskId, scale }) {
               </div>
             </div>
             <div className="card-body">
-              <Urm.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} top={6} size={320} />
+              <Urm.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} shotsFilter={shotsFilter} top={6} size={320} />
             </div>
           </div>
         )}
