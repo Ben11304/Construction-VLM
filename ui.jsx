@@ -128,8 +128,13 @@ function summaryFor(datasetId, taskId, scale, shotsFilter) {
     const macroAcc = aggAvg != null ? aggAvg : rowMacro;
     const macroSource = aggAvg != null ? "run-level" : "row-mean";
 
-    const clean = mrows.find(r => r.condition === "clean");
-    const aug   = mrows.filter(r => r.condition !== "clean");
+    // Δ vs clean only meaningful within ONE task — different tasks use
+    // different metrics (BLEU vs Rule-F1 vs mIoU) and averaging across them
+    // is non-comparable. When taskId === "all", null these out so the UI
+    // shows "—" rather than a misleading number.
+    const taskLocked = taskId != null && taskId !== "all";
+    const clean = taskLocked ? mrows.find(r => r.condition === "clean") : null;
+    const aug   = taskLocked ? mrows.filter(r => r.condition !== "clean") : [];
     const cleanAcc = clean ? clean.acc : null;
     const augAccs  = aug.map(r => r.acc).filter(v => v != null);
     const augAcc   = augAccs.length ? augAccs.reduce((s,v)=>s+v,0)/augAccs.length : null;

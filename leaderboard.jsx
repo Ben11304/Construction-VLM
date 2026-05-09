@@ -49,6 +49,7 @@ function LeaderboardScreen({ datasetId, taskId, scale, shotsFilter }) {
           <div className="page-sub">
             {ds.id} · scale: {scale} · task: {taskId === "all" ? `all (${Ulb.tasksForDataset(ds.id).length})` : taskId}
             {metricKind ? ` · metric: ${metricKind}` : ""} · {ds.conditions.length} conditions · {data.length} models
+            {taskId === "all" && <span className="t-mute" style={{marginLeft:8, fontStyle:"italic"}}>· Δ/Robust hidden — pick one task to compare</span>}
           </div>
         </div>
         <div className="row-h">
