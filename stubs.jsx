@@ -42,16 +42,25 @@ function DatasetsScreen() {
     return <div className="page"><div className="page-head"><div><h1 className="page-title">Datasets</h1></div></div>
       <Ust.EmptyState title="No datasets registered" hint="DATASET agent: cveval/data/<name>.py + @register_dataset(...)" /></div>;
   }
+  // Contract version comes from the DATASET agent manifest (manifest-driven —
+  // no fabricated metadata). Per-dataset release variants ("what we run on")
+  // come from each run's effective_config.yaml, surfaced by data.py.
+  const dsManifest = (Dst.manifests || []).find(m => m.agent === "DATASET");
   return (
     <div className="page">
       <div className="page-head">
         <div>
           <h1 className="page-title">Datasets</h1>
-          <div className="page-sub">{Dst.datasets.length} registered · multi-dataset extensible via `BaseDataset.conditions_meta()`</div>
+          <div className="page-sub">
+            {Dst.datasets.length} registered
+            {dsManifest && <> · contract <span className="mono">v{dsManifest.version}</span> · updated {dsManifest.last_updated}</>}
+          </div>
         </div>
       </div>
       <div className="col-v" style={{gap:12}}>
-        {Dst.datasets.map(d => (
+        {Dst.datasets.map(d => {
+          const variants = d.variants || [];
+          return (
           <div key={d.id} className="card">
             <div className="card-head">
               <div>
@@ -61,17 +70,54 @@ function DatasetsScreen() {
               <div className="row-h">
                 {d.license && <span className="tag">{d.license}</span>}
                 {d.n_total != null && <span className="tag">{d.n_total.toLocaleString()} rows</span>}
+                {d.run_count > 0 && <span className="tag">{d.run_count} runs</span>}
               </div>
             </div>
             <div className="card-body">
-              {d.description && <div className="t-text2" style={{marginBottom:10}}>{d.description}</div>}
-              {d.source_url && (
-                <div style={{marginBottom:10}}>
-                  <span className="mono t-mute upper" style={{fontSize:"var(--fs-xs)", marginRight:8}}>source</span>
-                  <a className="mono" href={d.source_url} target="_blank" rel="noreferrer">{d.source_url}</a>
+              <div className="t-text2" style={{marginBottom:10}}>
+                {d.description || (
+                  <span className="t-mute">No description exposed by the adapter — see the DATASET manifest on the Manifests page.</span>
+                )}
+              </div>
+              <KVRow k="source" v={
+                d.source_url
+                  ? <a className="mono" href={d.source_url} target="_blank" rel="noreferrer" style={{wordBreak:"break-all"}}>{d.source_url}</a>
+                  : <span className="t-mute">—</span>
+              } />
+
+              {/* Release / variant tracking — "what dataset are we running on" */}
+              <div style={{margin:"16px 0 6px"}}>
+                <span className="mono t-mute upper" style={{fontSize:"var(--fs-xs)"}}>releases · what we run on ({variants.length})</span>
+              </div>
+              {variants.length ? (
+                <div className="card card-flush" style={{overflowX:"auto"}}>
+                  <table className="table">
+                    <thead><tr>
+                      <th>release</th><th>rows</th><th>roots</th><th>tasks</th><th>models</th><th>runs</th><th>last run</th>
+                    </tr></thead>
+                    <tbody>
+                      {variants.map(v => (
+                        <tr key={v.variant}>
+                          <td className="mono" style={{fontWeight:600}} title={v.data_root || ""}>{v.variant}</td>
+                          <td className="mono t-text2">{(v.n_rows || 0).toLocaleString()}</td>
+                          <td className="mono t-text2">{v.roots.join(", ") || "—"}</td>
+                          <td className="mono t-text2">{v.tasks.join(", ") || "—"}</td>
+                          <td className="mono t-text2" style={{maxWidth:200, whiteSpace:"normal"}}>{v.models.join(", ") || "—"}</td>
+                          <td className="mono t-text2">{v.n_runs}</td>
+                          <td className="mono t-mute" style={{whiteSpace:"nowrap"}}>{v.last_run || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="t-mute" style={{fontSize:"var(--fs-sm)"}}>
+                  No runs found in <span className="mono">results/</span> — predictions may live only on the scratch mirror.
                 </div>
               )}
-              <div style={{marginBottom:6}}>
+
+              {/* Conditions */}
+              <div style={{margin:"16px 0 6px"}}>
                 <span className="mono t-mute upper" style={{fontSize:"var(--fs-xs)"}}>conditions ({d.conditions.length})</span>
               </div>
               <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
@@ -90,7 +136,8 @@ function DatasetsScreen() {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
