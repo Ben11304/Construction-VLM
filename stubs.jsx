@@ -225,6 +225,102 @@ function ManifestsScreen() {
   );
 }
 
+// safety_vqa G-Eval reasoning-quality panel (optional payload `Dst.geval`).
+// Reads: geval.{n_common,per_rule_support,models[],rubric,scale_note,pairs,note}.
+// Shows ONLY common-subset means (cross-model comparable). Full-slice ranking is
+// deliberately NOT rendered (retracted — per-model selection bias). Renders an
+// empty state when the payload is absent so it degrades gracefully.
+function GevalScreen() {
+  const g = Dst.geval;
+  if (!g || !(g.models || []).length) {
+    return <div className="page"><div className="page-head"><div>
+      <h1 className="page-title">G-Eval reasoning quality</h1></div></div>
+      <Ust.EmptyState title="No G-Eval stats"
+        hint="VLM agent: stage _geval_common_subset_v2strict.json into results/ (safety_vqa LLM-judge)." />
+    </div>;
+  }
+  const fmt = (v) => (typeof v === "number" ? v.toFixed(3) : "—");
+  const support = g.per_rule_support || {};
+  // Caveat: thin-support rules undermine per-rule reliability — surface explicitly.
+  const thin = Object.entries(support).filter(([, n]) => (n || 0) < 20)
+    .map(([r, n]) => `rule${r} support ${n}`).join(", ");
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">G-Eval reasoning quality</h1>
+          <div className="page-sub">
+            safety_vqa · LLM-as-judge · common-subset means
+            {g.n_common != null && <> · <span className="mono">n_common={g.n_common}</span></>}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{borderColor:"var(--warning)", marginBottom:14}}>
+        <div className="card-body" style={{fontSize:"var(--fs-sm)"}}>
+          <strong>Common-subset only.</strong> Means are computed on the intersection
+          of judged (image, rule) cells across all models — the cross-model
+          comparable view. Full-slice ranking is not shown (per-model selection bias).
+          {g.scale_note && <div className="t-mute" style={{marginTop:6}}>{g.scale_note}</div>}
+          {thin && <div className="t-mute" style={{marginTop:6}}>⚠ thin per-rule support: {thin} — interpret rule-level scores with caution.</div>}
+        </div>
+      </div>
+
+      <div className="card card-flush" style={{overflowX:"auto"}}>
+        <table className="table">
+          <thead><tr>
+            <th>model</th><th>relevance /2</th><th>equivalence /2</th>
+            <th>specificity /2</th><th>total /6</th>
+          </tr></thead>
+          <tbody>
+            {g.models.map((m, i) => (
+              <tr key={m.model_key || m.model}>
+                <td className="mono" style={{fontWeight:600}}>
+                  {i === 0 && <span className="tag" style={{marginRight:6}}>top</span>}
+                  {m.model}
+                </td>
+                <td className="mono t-text2">{fmt(m.relevance)}</td>
+                <td className="mono t-text2">{fmt(m.equivalence)}</td>
+                <td className="mono t-text2">{fmt(m.specificity)}</td>
+                <td className="mono" style={{fontWeight:600}}>{fmt(m.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {g.pairs && Object.keys(g.pairs).length > 0 && (
+        <details style={{marginTop:14}}>
+          <summary className="t-mute mono upper" style={{fontSize:"var(--fs-xs)", cursor:"pointer"}}>
+            pairwise signal (paired bootstrap + Wilcoxon)
+          </summary>
+          <div className="card card-flush" style={{overflowX:"auto", marginTop:8}}>
+            <table className="table">
+              <thead><tr><th>pair</th><th>axis</th><th>Δ mean</th><th>95% CI</th><th>wilcoxon p</th><th>verdict</th></tr></thead>
+              <tbody>
+                {Object.entries(g.pairs).flatMap(([pair, axes]) =>
+                  Object.entries(axes || {}).map(([axis, s]) => (
+                    <tr key={pair + axis}>
+                      <td className="mono t-text2">{pair}</td>
+                      <td className="mono t-text2">{axis}</td>
+                      <td className="mono t-text2">{typeof s.mean_diff === "number" ? s.mean_diff.toFixed(3) : "—"}</td>
+                      <td className="mono t-mute">{Array.isArray(s.ci95) ? `[${s.ci95.map(x=>x?.toFixed?.(3) ?? x).join(", ")}]` : "—"}</td>
+                      <td className="mono t-mute">{s.wilcoxon_p == null ? "—" : (s.wilcoxon_p < 1e-4 ? s.wilcoxon_p.toExponential(1) : s.wilcoxon_p.toFixed(4))}</td>
+                      <td><span className="tag">{s.conclusion || "—"}</span></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
+      {g.note && <div className="t-mute" style={{marginTop:12, fontSize:"var(--fs-xs)"}}>{g.note}</div>}
+    </div>
+  );
+}
+
 function KVRow({ k, v }) {
   return (
     <div style={{display:"grid", gridTemplateColumns:"80px 1fr", gap:8, fontSize:"var(--fs-sm)"}}>
@@ -234,4 +330,4 @@ function KVRow({ k, v }) {
   );
 }
 
-window.__StubScreens = { ModelsScreen, DatasetsScreen, TasksScreen, MetricsScreen, ManifestsScreen };
+window.__StubScreens = { ModelsScreen, DatasetsScreen, TasksScreen, MetricsScreen, ManifestsScreen, GevalScreen };

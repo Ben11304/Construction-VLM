@@ -487,6 +487,7 @@ function Sidebar({ route, setRoute }) {
     { id: "robustness",  label: "Robustness matrix" },
     { id: "runs",        label: "Runs", badge: runningCount || null },
     { id: "samples",     label: "Sample inspector" },
+    { id: "geval",       label: "G-Eval reasoning", badge: (D.geval && D.geval.models) ? D.geval.models.length : null },
     { section: "configure" },
     { id: "models",    label: "Models",    badge: D.models.length || null },
     { id: "datasets",  label: "Datasets",  badge: D.datasets.length || null },

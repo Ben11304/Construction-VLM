@@ -50,6 +50,7 @@ function App() {
   else if (route === "robustness")  content = <R  {...screenProps} />;
   else if (route === "runs")        content = <Ru {...screenProps} />;
   else if (route === "samples")     content = <S  {...screenProps} />;
+  else if (route === "geval")       content = <St.GevalScreen     {...screenProps} />;
   else if (route === "models")      content = <St.ModelsScreen   {...screenProps} />;
   else if (route === "datasets")    content = <St.DatasetsScreen {...screenProps} />;
   else if (route === "tasks")       content = <St.TasksScreen    {...screenProps} />;
