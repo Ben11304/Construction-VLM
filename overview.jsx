@@ -58,14 +58,7 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
         <div className="kpi">
           <div className="kpi-label">Samples evaluated</div>
           <div className="kpi-value t-num">{samplesEvaluated.toLocaleString()}</div>
-          <div className="kpi-foot">across {Dov.runs.length} runs · {running} running</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">Models · datasets</div>
-          <div className="kpi-value t-num">{Dov.models.length} · {Dov.datasets.length}</div>
-          <div className="kpi-foot">
-            {Dov.models.filter(m=>m.type==="open").length} open · {Dov.models.filter(m=>m.type==="closed").length} API
-          </div>
+          <div className="kpi-foot">across {Dov.runs.length} runs · {Dov.models.length} models</div>
         </div>
       </div>
 
@@ -76,7 +69,24 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
         />
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 16 }}>
+          {/* HERO — Drift ladder for the selected task (BOSS-approved Drift view) */}
+          <div className="card" style={{marginBottom:16}}>
+            <div className="card-head">
+              <div>
+                <div className="card-title">Drift ladder</div>
+                <div className="card-sub">Paired clean→condition change · whisker = ci95 · CI over 0 = hollow (no drift)</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={()=>goto("robustness")}>Heatmap drill-in →</button>
+            </div>
+            <div className="card-body">
+              {window.__DriftView
+                ? <window.__DriftView.DriftView taskId={taskId} />
+                : <Uov.EmptyState title="Drift view unavailable" />}
+            </div>
+          </div>
+
+          {/* Drill-in: compact leaderboard + recent runs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16 }}>
             <div className="card">
               <div className="card-head">
                 <div>
@@ -93,9 +103,7 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
                       <th>Model</th>
                       <th className="num">Macro acc</th>
                       <th className="num">Clean</th>
-                      <th className="num">Aug avg</th>
                       <th className="num">Δ</th>
-                      <th className="num">Robust</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -104,8 +112,8 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
                         <td className="mono t-mute">{i+1}</td>
                         <td>
                           <div className="row-h">
+                            <svg width="12" height="12" viewBox="0 0 12 12" style={{flex:"none"}}><circle cx="6" cy="6" r="4.5" fill={Uov.modelColor(s.id)} /></svg>
                             <span style={{fontWeight:500}}>{s.id}</span>
-                            <span className="tag">{s.type}</span>
                           </div>
                         </td>
                         <td className="num mono">
@@ -113,9 +121,7 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
                           {Uov.fmtPct(s.macroAcc)}
                         </td>
                         <td className="num mono">{Uov.fmtPct(s.cleanAcc)}</td>
-                        <td className="num mono">{Uov.fmtPct(s.augAcc)}</td>
                         <td className="num mono"><span className={"delta " + (s.deltaClean < 0 ? "neg" : "pos")}>{Uov.fmtDelta(s.deltaClean)}</span></td>
-                        <td className="num mono">{s.robustness != null ? (s.robustness*100).toFixed(1) : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -123,20 +129,6 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
               </div>
             </div>
 
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <div className="card-title">Robustness vs accuracy</div>
-                  <div className="card-sub">Each dot = one model</div>
-                </div>
-              </div>
-              <div className="card-body">
-                <ScatterPlot data={summary} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="card">
               <div className="card-head">
                 <div>
@@ -148,32 +140,18 @@ function OverviewScreen({ datasetId, taskId, scale, shotsFilter, goto }) {
               <div className="card-body card-flush" style={{padding:0}}>
                 <table className="table">
                   <thead>
-                    <tr><th>Run</th><th>Model</th><th>Status</th><th className="num">N</th><th className="num">Started</th></tr>
+                    <tr><th>Run</th><th>Model</th><th className="num">N</th></tr>
                   </thead>
                   <tbody>
                     {Dov.runs.slice(0,6).map(r => (
                       <tr key={r.id}>
-                        <td className="mono" style={{color:"var(--text-2)"}}>{r.id.slice(0,28)}{r.id.length>28?"…":""}</td>
+                        <td className="mono" style={{color:"var(--text-2)"}}>{r.id.slice(0,24)}{r.id.length>24?"…":""}</td>
                         <td className="mono">{r.model}</td>
-                        <td><Uov.StatusChip status={r.status} /></td>
                         <td className="num mono">{r.n.toLocaleString()}</td>
-                        <td className="mono t-mute" style={{fontSize:"var(--fs-xs)"}}>{r.started}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <div className="card-title">Condition difficulty</div>
-                  <div className="card-sub">Avg accuracy across all models</div>
-                </div>
-              </div>
-              <div className="card-body">
-                <ConditionDifficulty conds={conds} matrix={matrix} />
               </div>
             </div>
           </div>

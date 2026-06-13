@@ -25,6 +25,17 @@ function accBg(acc) {
   return `oklch(0.55 0.18 ${h.toFixed(1)} / ${a.toFixed(2)})`;
 }
 
+// ---------- site-wide model palette (ColorBrewer Set2, colorblind-safe) ----------
+// Fixed per-model color AND marker shape (never color-only, per a11y §F).
+// Assigned by stable sorted model-id index so a model keeps its identity across
+// every chart on the site.
+const _SET2 = ["#66c2a5","#fc8d62","#8da0cb","#e78ac3","#a6d854","#ffd92f","#e5c494","#b3b3b3"];
+const _MODEL_MARKERS = ["circle","square","triangle","diamond","cross"];
+const _MODEL_ORDER = (D.models || []).map(m => m.id).sort();
+function _modelIdx(id) { const i = _MODEL_ORDER.indexOf(id); return i < 0 ? 0 : i; }
+function modelColor(id)  { return _SET2[_modelIdx(id) % _SET2.length]; }
+function modelMarker(id) { return _MODEL_MARKERS[_modelIdx(id) % _MODEL_MARKERS.length]; }
+
 // ---------- dataset helpers (cveval-specific) ----------
 function getDataset(id) {
   if (!id) return D.datasets[0] || null;
@@ -620,7 +631,7 @@ function Topbar({ route, datasetId, setDatasetId, taskId, setTaskId, scale, setS
 
 window.__UI = {
   fmtPct, fmtPct0, fmtMs, fmtUsd, fmtDelta,
-  sevColor, accColor, accBg,
+  sevColor, accColor, accBg, modelColor, modelMarker,
   getDataset, conditionsOf, conditionMeta, matrixFor, modelsInDataset, summaryFor,
   tasksForDataset, metricKindFor, runsFiltered,
   availableMetrics, metricValue,
