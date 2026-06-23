@@ -225,6 +225,97 @@ function ManifestsScreen() {
   );
 }
 
+// Caveated 5-model scale-ladder reasoning view (VLM 0.26.x). The reasoning
+// ladder is a PRELIMINARY, single-judge (mistral-small-3) signal that is NOT
+// judge-robust — we lead with the caveat and present totals as caveated, never
+// as a clean ranking. No public overclaim of a "reasoning dissociation".
+function GevalPreliminaryScreen({ g }) {
+  const fmt = (v) => (typeof v === "number" ? v.toFixed(3) : "—");
+  const fmtp = (v) => (v == null ? "—" : (v < 1e-4 ? v.toExponential(1) : v.toFixed(4)));
+  const support = g.per_rule_support || {};
+  return (
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">
+            G-Eval reasoning quality
+            <span className="tag" style={{marginLeft:8, borderColor:"var(--warning)", color:"var(--warning)"}}>
+              PRELIMINARY
+            </span>
+          </h1>
+          <div className="page-sub">
+            safety_vqa · single-judge ({g.single_judge || "mistral-small-3"}) · scale-ladder common subset
+            {g.n_common != null && <> · <span className="mono">n_common={g.n_common}</span></>}
+          </div>
+        </div>
+      </div>
+
+      {/* Prominent not-judge-robust caveat — this is the headline of the panel. */}
+      <div className="card" style={{borderColor:"var(--warning)", borderWidth:2, marginBottom:14}}>
+        <div className="card-body" style={{fontSize:"var(--fs-sm)"}}>
+          <strong style={{color:"var(--warning)"}}>⚠ Preliminary · single-judge · not judge-robust.</strong>
+          <div style={{marginTop:6}}>{g.caveat}</div>
+          {g.support_caveat && <div className="t-mute" style={{marginTop:6}}>{g.support_caveat}</div>}
+          {g.scale_note && <div className="t-mute" style={{marginTop:6}}>{g.scale_note}</div>}
+        </div>
+      </div>
+
+      {/* Per-model reasoning totals — caveated, NOT ranked (no "top" badge). */}
+      <div className="card-label upper t-mute" style={{fontSize:"var(--fs-xs)", margin:"4px 0 6px"}}>
+        Per-model reasoning total /6 (single-judge, common subset) — caveated, not a ranking
+      </div>
+      <div className="card card-flush" style={{overflowX:"auto"}}>
+        <table className="table">
+          <thead><tr><th>model</th><th>reasoning total /6</th></tr></thead>
+          <tbody>
+            {g.models.map((m) => (
+              <tr key={m.model}>
+                <td className="mono" style={{fontWeight:600}}>{m.model}</td>
+                <td className="mono t-text2">{fmt(m.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Scale → reasoning ladders (within-family paired) — flagged single-judge. */}
+      {(g.ladders || []).length > 0 && (
+        <>
+          <div className="card-label upper t-mute" style={{fontSize:"var(--fs-xs)", margin:"16px 0 6px"}}>
+            Scale → reasoning ladders (paired Wilcoxon + bootstrap) — single-judge, preliminary
+          </div>
+          <div className="card card-flush" style={{overflowX:"auto"}}>
+            <table className="table">
+              <thead><tr>
+                <th>pair</th><th>Δ total /6</th><th>95% CI</th><th>p</th><th>signal (single-judge)</th>
+              </tr></thead>
+              <tbody>
+                {g.ladders.map((l) => (
+                  <tr key={l.pair}>
+                    <td className="mono t-text2">{l.pair}</td>
+                    <td className="mono t-text2">{fmt(l.delta)}</td>
+                    <td className="mono t-mute">{Array.isArray(l.ci95) ? `[${l.ci95.map(x=>x?.toFixed?.(3) ?? x).join(", ")}]` : "—"}</td>
+                    <td className="mono t-mute">{fmtp(l.p)}</td>
+                    <td>
+                      <span className="tag">
+                        {l.sig ? (l.delta < 0 ? "significant negative*" : "significant positive*") : "n.s."}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="t-mute" style={{marginTop:8, fontSize:"var(--fs-xs)"}}>
+            * single-judge signal only — not confirmed by a second judge (robustness
+            check inconclusive). Not to be read as a settled reasoning-scaling conclusion.
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // safety_vqa G-Eval reasoning-quality panel (optional payload `Dst.geval`).
 // Reads: geval.{n_common,per_rule_support,models[],rubric,scale_note,pairs,note}.
 // Shows ONLY common-subset means (cross-model comparable). Full-slice ranking is
@@ -239,6 +330,9 @@ function GevalScreen() {
         hint="VLM agent: stage _geval_common_subset_v2strict.json into results/ (safety_vqa LLM-judge)." />
     </div>;
   }
+  // Caveated 5-model scale-ladder view (VLM 0.26.x): preliminary single-judge,
+  // NOT judge-robust — render with a prominent caveat, never as a clean ranking.
+  if (g.preliminary) return <GevalPreliminaryScreen g={g} />;
   const fmt = (v) => (typeof v === "number" ? v.toFixed(3) : "—");
   const support = g.per_rule_support || {};
   // Caveat: thin-support rules undermine per-rule reliability — surface explicitly.
