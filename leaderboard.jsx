@@ -103,6 +103,12 @@ function LeaderboardScreen({ datasetId, taskId, scale, shotsFilter }) {
                       <div className="row-h">
                         <span style={{fontWeight:500}}>{s.modelId || s.id}</span>
                         <span className="tag">{s.type === "closed" ? "API" : "OSS"}</span>
+                        {s.note && (
+                          <span className="tag" title={s.note}
+                            style={{borderColor:"var(--warning)", color:"var(--warning)", cursor:"help"}}>
+                            floor ⓘ
+                          </span>
+                        )}
                         {s.shots != null && (
                           <span className="tag mono" style={{
                             color: s.shots > 0 ? "var(--accent)" : "var(--muted)",

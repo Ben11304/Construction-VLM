@@ -29,6 +29,12 @@ function ModelsScreen() {
                 <KVRow k="backend" v={m.backend} />
                 <KVRow k="class"   v={<span style={{wordBreak:"break-all"}}>{m.cls_qualname}</span>} />
               </div>
+              {m.note && (
+                <div className="t-mute" style={{marginTop:10, paddingTop:8, borderTop:"1px solid var(--border)", fontSize:"var(--fs-xs)"}}>
+                  <span className="tag" style={{marginRight:6, borderColor:"var(--warning)", color:"var(--warning)"}}>floor</span>
+                  {m.note}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -257,6 +263,7 @@ function GevalPreliminaryScreen({ g }) {
           <div style={{marginTop:6}}>{g.caveat}</div>
           {g.support_caveat && <div className="t-mute" style={{marginTop:6}}>{g.support_caveat}</div>}
           {g.scale_note && <div className="t-mute" style={{marginTop:6}}>{g.scale_note}</div>}
+          {g.pending_note && <div style={{marginTop:6}}><span className="tag" style={{marginRight:6}}>pending</span><span className="t-mute">{g.pending_note}</span></div>}
         </div>
       </div>
 
