@@ -263,7 +263,7 @@ function GevalPreliminaryScreen({ g }) {
           <div style={{marginTop:6}}>{g.caveat}</div>
           {g.support_caveat && <div className="t-mute" style={{marginTop:6}}>{g.support_caveat}</div>}
           {g.scale_note && <div className="t-mute" style={{marginTop:6}}>{g.scale_note}</div>}
-          {g.pending_note && <div style={{marginTop:6}}><span className="tag" style={{marginRight:6}}>pending</span><span className="t-mute">{g.pending_note}</span></div>}
+          {g.exclusion_note && <div style={{marginTop:6}}><span className="tag" style={{marginRight:6}}>excluded</span><span className="t-mute">{g.exclusion_note}</span></div>}
         </div>
       </div>
 
