@@ -208,6 +208,7 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
   const [hiddenConds, setHiddenConds] = useState(() => new Set());
   const [autoScale, setAutoScale] = useState(true);
   const [localMetric, setLocalMetric] = useState(metricKey || "auto");
+  const [deltaMode, setDeltaMode] = useState(false);  // Δ-from-clean (inward = degrade)
   const [hover, setHover] = useState(null);
   const activeMetric = localMetric;
   const ds = getDataset(datasetId);
@@ -273,6 +274,39 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
     return [cx + rr * Math.cos(angle(i)), cy + rr * Math.sin(angle(i))];
   };
 
+  // --- Δ-from-clean mode: plot each condition RELATIVE to the model's clean
+  // baseline. A fixed "clean" reference ring sits at R0; degraded conditions
+  // (Δ<0) are drawn INWARD of it, improvements (Δ>0) outward. This makes drift
+  // visible instead of compressed against an absolute 0-based scale. Δ uses the
+  // same active metric (per-condition value − clean value), NOT paired_delta.
+  const R0 = 0.62;
+  const cleanValOf = (group) => {
+    const row = matrix.find(r => r.model === group.modelId && r.condition === "clean"
+      && (group.shots == null || (r.shots ?? 0) === group.shots));
+    return metricValue(row, activeMetric);
+  };
+  let deltaMax = 0;
+  if (deltaMode) {
+    for (const g of visible) {
+      const cv = cleanValOf(g);
+      if (cv == null) continue;
+      for (const c of conds) {
+        const v = valueAt(g, c.key);
+        if (v != null) deltaMax = Math.max(deltaMax, Math.abs(v - cv));
+      }
+    }
+    deltaMax = Math.max(deltaMax, 0.005);
+  }
+  // normalized radius [0,1] for a (group, condition) under the active mode.
+  const radiusFor = (g, condKey) => {
+    const v = valueAt(g, condKey);
+    if (v == null) return null;
+    if (!deltaMode) return norm(v);
+    const cv = cleanValOf(g);
+    if (cv == null) return null;
+    return Math.max(0, Math.min(1, R0 + ((v - cv) / deltaMax) * 0.34));
+  };
+
   const rings = [0.25, 0.5, 0.75, 1.0];
   const ringPath = (val) => conds.map((c, i) => {
     const [x, y] = xy(i, val);
@@ -301,13 +335,21 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
           {availMetrics.map(k => <option key={k} value={k}>{k}</option>)}
         </select>
         <span className="t-mute mono" style={{fontSize:"var(--fs-xs)"}}>
-          axis max: {fmtTick(1)} {autoScale ? "(auto)" : "(fixed)"}
+          {deltaMode ? "Δ-from-clean (inward = degrade)" : `axis max: ${fmtTick(1)} ${autoScale ? "(auto)" : "(fixed)"}`}
         </span>
         <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
-              onClick={()=>setAutoScale(!autoScale)}>
-          <span className="chip-dot" style={{background: autoScale ? "var(--accent)" : "var(--muted)"}} />
-          {autoScale ? "auto-scale" : "0–100%"}
+              onClick={()=>setDeltaMode(!deltaMode)}
+              title="Toggle absolute level vs Δ-from-clean (degraded conditions pull inward of the clean ring)">
+          <span className="chip-dot" style={{background: deltaMode ? "var(--accent)" : "var(--muted)"}} />
+          {deltaMode ? "Δ-from-clean" : "absolute"}
         </span>
+        {!deltaMode && (
+          <span className="chip mono" style={{cursor:"pointer", fontSize:"var(--fs-xs)"}}
+                onClick={()=>setAutoScale(!autoScale)}>
+            <span className="chip-dot" style={{background: autoScale ? "var(--accent)" : "var(--muted)"}} />
+            {autoScale ? "auto-scale" : "0–100%"}
+          </span>
+        )}
       </div>
       {conds.length < 3 ? (
         <div className="t-mute" style={{textAlign:"center", padding:"24px 8px", fontSize:"var(--fs-xs)"}}>
@@ -315,9 +357,19 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
         </div>
       ) : (
       <svg viewBox={`0 0 ${w} ${h}`} style={{width:"100%", height: size, display:"block"}} onMouseLeave={()=>setHover(null)}>
-        {rings.map((v, i) => (
-          <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
-        ))}
+        {deltaMode ? (
+          <>
+            {/* guide rings: outer (max +Δ), clean baseline (solid), inner (max −Δ) */}
+            <path d={ringPath(Math.min(1, R0 + 0.34))} stroke="var(--border)" fill="none" strokeDasharray="2 3" />
+            <path d={ringPath(Math.max(0, R0 - 0.34))} stroke="var(--border)" fill="none" strokeDasharray="2 3" />
+            <path d={ringPath(R0)} stroke="var(--accent)" fill="none" strokeWidth="1.4" strokeDasharray="5 3" />
+            <text x={(xy(0, R0))[0] + 4} y={(xy(0, R0))[1] - 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--accent)">clean</text>
+          </>
+        ) : (
+          rings.map((v, i) => (
+            <path key={v} d={ringPath(v)} stroke="var(--border)" fill="none" strokeDasharray={i === rings.length-1 ? "" : "2 3"} />
+          ))
+        )}
         {conds.map((c, i) => {
           const [x, y] = xy(i, 1);
           return <line key={c.key} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--border)" strokeDasharray="2 3" />;
@@ -333,7 +385,7 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
             </g>
           );
         })}
-        {[0.5, 1.0].map(v => {
+        {!deltaMode && [0.5, 1.0].map(v => {
           const [tx, ty] = xy(0, v);
           return <text key={v} x={tx + 4} y={ty + 3} fontSize="9" fontFamily="var(--font-mono)" fill="var(--muted)">{fmtTick(v)}</text>;
         })}
@@ -341,9 +393,8 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
           if (hidden.has(g.id)) return null;
           const color = colorOf(mi);
           const pts = conds.map((c, i) => {
-            const v = valueAt(g, c.key);
-            const nv = norm(v);
-            return xy(i, nv != null ? nv : 0);
+            const rad = radiusFor(g, c.key);
+            return xy(i, rad != null ? rad : (deltaMode ? R0 : 0));
           });
           const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ") + " Z";
           return (
@@ -357,13 +408,17 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
                 return (
                   <circle key={i} cx={p[0]} cy={p[1]} r={isHover ? 5 : 3}
                     fill={color} className="hover-target"
-                    onMouseEnter={()=>setHover({
-                      svgX: p[0], svgY: p[1],
-                      model: g.id, condition: conds[i].label, value: v, color,
-                      metricKey: activeMetric === "auto" ? (row?.metric_kind || "auto") : activeMetric,
-                      runId: row?.run_id || null,
-                      n: row?.n,
-                    })}
+                    onMouseEnter={()=>{
+                      const cv = deltaMode ? cleanValOf(g) : null;
+                      setHover({
+                        svgX: p[0], svgY: p[1],
+                        model: g.id, condition: conds[i].label, value: v, color,
+                        delta: (deltaMode && cv != null) ? (v - cv) : null,
+                        metricKey: activeMetric === "auto" ? (row?.metric_kind || "auto") : activeMetric,
+                        runId: row?.run_id || null,
+                        n: row?.n,
+                      });
+                    }}
                   />
                 );
               })}
@@ -385,6 +440,14 @@ function RadarChart({ datasetId, taskId, scale, shotsFilter, metricKey, top = 6,
             <span className="tt-label">{hover.condition}</span>
             <span className="tt-val">{fmtVal(hover.value)}</span>
           </div>
+          {hover.delta != null && (
+            <div className="tt-row">
+              <span className="tt-label">Δ vs clean</span>
+              <span className="tt-val" style={{color: hover.delta < 0 ? "var(--danger,#e5484d)" : "var(--text)"}}>
+                {(hover.delta >= 0 ? "+" : "") + fmtVal(hover.delta)}
+              </span>
+            </div>
+          )}
           {hover.metricKey && hover.metricKey !== "auto" && (
             <div className="tt-row" style={{marginTop:2}}>
               <span className="tt-label" style={{fontSize:"10px"}}>{hover.metricKey}</span>

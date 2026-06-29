@@ -44,8 +44,11 @@ function DriftLegend({ models }) {
 }
 
 // ---------- Panel A: Drift ladder (forest plot) ----------
-function DriftLadder({ taskData, families }) {
+// `modelsData` = {model:{cond:{delta_mean,ci95,n_pairs,...}}} — either the
+// rule_jaccard series or the GT-nonempty safety_jaccard_gtne series.
+function DriftLadder({ modelsData, families }) {
   const [hover, setHover] = React.useState(null);
+  const taskData = { models: modelsData || {} };
   const models = Object.keys(taskData.models || {}).sort();
   // Build ordered rows from families (severity order) — only conditions that
   // at least one present model actually has data for.
@@ -121,7 +124,8 @@ function DriftLadder({ taskData, families }) {
 }
 
 // ---------- Panel B: Severity slopes (small multiples) ----------
-function SeveritySlope({ fam, taskData, models, ydom }) {
+function SeveritySlope({ fam, modelsData, models, ydom }) {
+  const taskData = { models: modelsData || {} };
   const w = 240, h = 150, padL = 30, padR = 10, padT = 12, padB = 22;
   const xs = ["clean", ...fam.conditions];
   const X = i => padL + (i/(xs.length-1))*(w-padL-padR);
@@ -155,7 +159,8 @@ function SeveritySlope({ fam, taskData, models, ydom }) {
   );
 }
 
-function SeveritySlopes({ taskData, families }) {
+function SeveritySlopes({ modelsData, families }) {
+  const taskData = { models: modelsData || {} };
   const models = Object.keys(taskData.models || {}).sort();
   const fams = families.filter(f => f.family !== "small");          // slopes only for multi-step families
   // shared y-domain across panels (same scalar) for cross-family comparability.
@@ -172,7 +177,27 @@ function SeveritySlopes({ taskData, families }) {
   const pad = ((hi-lo)||1)*0.1; const ydom = [lo-pad, hi+pad];
   return (
     <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:10}}>
-      {fams.map(f => <SeveritySlope key={f.family} fam={f} taskData={taskData} models={models} ydom={ydom} />)}
+      {fams.map(f => <SeveritySlope key={f.family} fam={f} modelsData={taskData.models} models={models} ydom={ydom} />)}
+    </div>
+  );
+}
+
+// One labeled drift-ladder block (header + forest plot + optional slopes).
+function LadderBlock({ scalarLabel, sub, modelsData, families, compact }) {
+  const models = Object.keys(modelsData || {}).sort();
+  return (
+    <div>
+      <div className="card-sub mono" style={{margin:"4px 0 6px"}}>
+        metric <b>{scalarLabel}</b>{sub ? <span className="t-mute"> · {sub}</span> : null}
+      </div>
+      <DriftLegend models={models} />
+      <DriftLadder modelsData={modelsData} families={families} />
+      {!compact && (
+        <>
+          <div className="card-sub mono" style={{margin:"14px 0 6px"}}>Severity slopes — paired mean by increasing severity (clean anchor → degraded)</div>
+          <SeveritySlopes modelsData={modelsData} families={families} />
+        </>
+      )}
     </div>
   );
 }
@@ -187,11 +212,14 @@ function DriftView({ taskId, compact }) {
   const task = (taskId && taskId !== "all" && pd.tasks[taskId]) ? taskId : taskKeys.sort()[0];
   const taskData = pd.tasks[task];
   const models = Object.keys(taskData.models || {}).sort();
+  const gtne = taskData.models_gtne || {};
+  const hasGtne = Object.keys(gtne).length > 0;
+
   return (
     <div>
       <div className="row-h" style={{justifyContent:"space-between", flexWrap:"wrap", gap:8}}>
         <div className="card-sub mono">
-          task <b>{task}</b> · metric <b>{taskData.scalar}</b> · Δ = condition − clean (paired by source_id) · {models.length} model{models.length!==1?"s":""}
+          task <b>{task}</b> · Δ = condition − clean (paired by source_id) · {models.length} model{models.length!==1?"s":""}
         </div>
       </div>
       {taskData.coverage_warning && (
@@ -201,16 +229,43 @@ function DriftView({ taskId, compact }) {
           </div>
         </div>
       )}
-      <DriftLegend models={models} />
-      <DriftLadder taskData={taskData} families={pd.families} />
-      {!compact && (
+
+      {hasGtne ? (
         <>
-          <div className="card-sub mono" style={{margin:"16px 0 6px"}}>Severity slopes — paired mean by increasing severity (clean anchor → degraded)</div>
-          <SeveritySlopes taskData={taskData} families={pd.families} />
+          {/* PRIMARY: GT-nonempty (robustness-faithful). */}
+          <LadderBlock
+            scalarLabel={taskData.scalar_gtne || "safety_jaccard_gtne"}
+            sub="GT-nonempty images only — robustness-faithful"
+            modelsData={gtne} families={pd.families} compact={compact} />
+
+          {/* Confound footnote (between the two series). */}
+          <div className="card" style={{borderColor:"var(--warning)", borderWidth:2, margin:"14px 0"}}>
+            <div className="card-body" style={{fontSize:"var(--fs-xs)"}}>
+              <strong style={{color:"var(--warning)"}}>⚠ Why two series:</strong>{" "}
+              <b>rule_jaccard</b> is confounded by abstention × 89.4% GT-empty images — a
+              positive Δ (e.g. InternVL) is an <b>artifact</b>, not robustness.{" "}
+              <b>safety_jaccard_gtne</b> scores only images with a real violation; on those,
+              all 5 models <b>degrade in the same direction</b>, with <b>rain_heavy</b> the worst.
+            </div>
+          </div>
+
+          {/* SECONDARY: confounded rule_jaccard, kept for reference (compact). */}
+          <details>
+            <summary className="card-sub mono" style={{cursor:"pointer"}}>
+              metric <b>rule_jaccard</b> <span className="t-mute">· confounded — kept for reference (click to expand)</span>
+            </summary>
+            <div style={{marginTop:8}}>
+              <LadderBlock scalarLabel="rule_jaccard" sub="confounded by abstention — NOT a robustness metric"
+                modelsData={taskData.models} families={pd.families} compact={true} />
+            </div>
+          </details>
         </>
+      ) : (
+        <LadderBlock scalarLabel={taskData.scalar} modelsData={taskData.models}
+          families={pd.families} compact={compact} />
       )}
     </div>
   );
 }
 
-window.__DriftView = { DriftView, DriftLadder, SeveritySlopes, DriftLegend };
+window.__DriftView = { DriftView, DriftLadder, SeveritySlopes, DriftLegend, LadderBlock };

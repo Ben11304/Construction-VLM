@@ -74,6 +74,27 @@ function RobustnessScreen({ datasetId, taskId, scale, shotsFilter }) {
         </div>
       </div>
 
+      {/* PRIMARY robustness view: drift ladder (paired Δ vs clean, CI-vs-0) —
+          the faithful drift representation. Absolute heatmap/radar are secondary. */}
+      {Drm.paired_delta && Drm.paired_delta.tasks &&
+        (taskId === "all" || Drm.paired_delta.tasks[taskId]) && (
+        <div className="card" style={{marginBottom: 16}}>
+          <div className="card-head">
+            <div>
+              <div className="card-title">Drift ladder — paired Δ vs clean (significance vs 0)</div>
+              <div className="card-sub">Forest plot: dot = mean Δ, whisker = 95% CI; a CI crossing 0 (hollow) = not significant. This is the robustness-faithful view.</div>
+            </div>
+          </div>
+          <div className="card-body">
+            {React.createElement(window.__DriftView.DriftView, { taskId, compact: true })}
+          </div>
+        </div>
+      )}
+
+      <div className="card-sub mono upper" style={{margin:"4px 0 8px", fontSize:"var(--fs-xs)"}}>
+        Secondary — absolute levels (not drift): heatmap + radar
+      </div>
+
       {hover && !selected && (
         <div style={{
           marginBottom: 8, padding: "6px 10px",
