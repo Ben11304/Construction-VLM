@@ -170,7 +170,7 @@ function RobustnessScreen({ datasetId, taskId, scale, shotsFilter }) {
               </div>
             </div>
             <div className="card-body">
-              <Urm.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} shotsFilter={shotsFilter} top={6} size={320} />
+              <Urm.RadarChart datasetId={ds.id} taskId={taskId} scale={scale} shotsFilter={shotsFilter} top={10} size={320} />
             </div>
           </div>
         )}
